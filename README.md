@@ -8,7 +8,7 @@ Ask W3C i18n answers questions about W3C Internationalization guidance with sour
   <a href="https://i18n-drafts-assistant.onrender.com/"><strong>Try it online</strong></a>
 </p>
 
-> **Unofficial project:** This is currently an unofficial project and is not an official W3C service.
+> **Experimental tool:** This is an experimental tool from the [W3C Internationalization Activity](https://www.w3.org/International/). Its answers are not W3C standards or official W3C positions.
 
 ## Example Questions
 

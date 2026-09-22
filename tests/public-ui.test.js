@@ -75,7 +75,7 @@ test('public UI links the W3C i18n icon to the W3C Internationalization site', a
 test('public UI links its GitHub icon to the project repository', async () => {
   const page = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
 
-  assert.match(page, /<a\s+class="github-link"[^>]*href="https:\/\/github\.com\/xfq\/i18n-drafts-assistant"[^>]*target="_blank"[^>]*rel="noopener noreferrer"/s);
+  assert.match(page, /<a\s+class="github-link"[^>]*href="https:\/\/github\.com\/w3c\/ask-i18n"[^>]*target="_blank"[^>]*rel="noopener noreferrer"/s);
   assert.match(page, /data-i18n-aria-label="githubLinkLabel"[^>]*aria-label="View project on GitHub"/s);
   assert.match(page, /<svg aria-hidden="true"[^>]*>[\s\S]*?<path fill="currentColor"/);
 });
@@ -86,11 +86,12 @@ test('citation source links open in a new window', async () => {
   assert.match(app, /link\.target = '_blank';/);
 });
 
-test('public UI prominently states the project is unofficial', async () => {
+test('public UI states the project is an experimental W3C i18n working group tool', async () => {
   const page = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
 
   assert.match(page, /<aside class="project-notice"[^>]*aria-label="Project status">/);
-  assert.match(page, /currently an unofficial project/i);
+  assert.match(page, /Experimental tool\./);
+  assert.match(page, /experimental tool from the W3C Internationalization Activity/i);
 });
 
 test('project notice uses a shorter centered max width', async () => {

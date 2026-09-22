@@ -13,8 +13,8 @@ export const MESSAGES = {
   en: {
     skipLink: 'Skip to content',
     projectStatusLabel: 'Project status',
-    projectNoticeStrong: 'Unofficial project.',
-    projectNoticeText: 'This is currently an unofficial project by Fuqiao Xue and is not an official W3C service.',
+    projectNoticeStrong: 'Experimental tool.',
+    projectNoticeText: 'This is an experimental tool from the W3C Internationalization Activity.',
     searchAriaLabel: 'Ask W3C Internationalization sources',
     questionLabel: 'Question',
     sampleQuestion: 'How should I declare UTF-8 character encoding in HTML?',
@@ -64,8 +64,8 @@ export const MESSAGES = {
   'zh-hans': {
     skipLink: '跳到主要内容',
     projectStatusLabel: '项目状态',
-    projectNoticeStrong: '非官方项目：',
-    projectNoticeText: '本项目是薛富侨的个人实验性项目，不是W3C官方服务。',
+    projectNoticeStrong: '实验性工具：',
+    projectNoticeText: '本项目是W3C国际化标准计划的实验性工具。',
     searchAriaLabel: '向W3C国际化提问',
     questionLabel: '问题',
     sampleQuestion: '如何在HTML中设置内容的语言？',

@@ -8,7 +8,7 @@ Ask W3C i18n是一个关于W3C国际化的问答工具，基于源文档提供�
   <a href="https://i18n-drafts-assistant.onrender.com/"><strong>在线版在这里</strong></a>
 </p>
 
-> **非官方项目：** 该项目并非W3C官方服务。
+> **实验性工具：** 本项目是[W3C国际化标准计划](https://www.w3.org/International/)的实验性工具，回答不代表W3C标准或W3C官方立场。
 
 ## 示例问题
 
