@@ -8,6 +8,7 @@ import { parseArgs } from '../src/indexing/indexer.js';
 
 const touchedKeys = [
   'PORT',
+  'BASE_PATH',
   'QUERY_LOG_MAX_BYTES',
   'QUERY_LOG_BACKUPS',
   'SOURCE_MODE',
@@ -26,6 +27,7 @@ test('getConfig loads values from a .env file', async () => {
   const envFilePath = await writeTempEnv([
     '# local configuration',
     'PORT=4123',
+    'BASE_PATH=/ask-i18n',
     'SOURCE_MODE=local',
     'SOURCE_REPO_PATH="/tmp/i18n drafts"',
     'export SOURCE_REF=fixture-ref',
@@ -43,6 +45,7 @@ test('getConfig loads values from a .env file', async () => {
     const config = getConfig({ envFilePath });
 
     assert.equal(config.port, 4123);
+    assert.equal(config.basePath, '/ask-i18n');
     assert.equal(config.sourceMode, 'local');
     assert.equal(config.sourceRepoPath, '/tmp/i18n drafts');
     assert.equal(config.sourceRef, 'fixture-ref');
@@ -54,6 +57,15 @@ test('getConfig loads values from a .env file', async () => {
     assert.equal(config.queryLogBackups, 5);
     assert.equal(config.isPullRequest, true);
     assert.deepEqual(config.trustedProxies, ['127.0.0.1/32', '::1']);
+  });
+});
+
+test('BASE_PATH defaults to the site root and normalizes override values', async () => {
+  const envFilePath = await writeTempEnv('SOURCE_MODE=local\n');
+
+  await withCleanEnv(async () => {
+    assert.equal(getConfig({ envFilePath }).basePath, '');
+    assert.equal(getConfig({ envFilePath, basePath: 'ask-i18n/' }).basePath, '/ask-i18n');
   });
 });
 

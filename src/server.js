@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getConfig } from './config.js';
+import { mountPath } from './base-path.js';
 import { loadIndex, appendQueryLog } from './db/store.js';
 import { retrieve } from './retrieval/hybrid.js';
 import { answerFromRetrieval } from './generation/answer.js';
@@ -30,7 +31,8 @@ export function createServer({ index = null, config = getConfig(), indexer = run
     trustedProxies: config.trustedProxies,
     sendLimitExceeded: (limitedRequest, limitedResponse) => {
       const limitedUrl = new URL(limitedRequest.url, `http://${limitedRequest.headers.host || 'localhost'}`);
-      if (isCommunityApiPath(limitedUrl.pathname)) {
+      const limitedPath = mountPath(limitedUrl.pathname, config.basePath).pathname;
+      if (isCommunityApiPath(limitedPath)) {
         sendJson(
           limitedResponse,
           429,
@@ -48,6 +50,14 @@ export function createServer({ index = null, config = getConfig(), indexer = run
     let url;
     try {
       url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
+
+      const mounted = mountPath(url.pathname, config.basePath);
+      if (mounted.redirectTo) {
+        response.writeHead(308, { location: `${mounted.redirectTo}${url.search}` });
+        response.end();
+        return;
+      }
+      url.pathname = mounted.pathname;
 
       if (url.pathname.startsWith('/api/')) {
         if (request.method === 'OPTIONS' && isCommunityApiPath(url.pathname)) {

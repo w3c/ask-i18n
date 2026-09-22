@@ -34,6 +34,7 @@ The browser receives the files in `public/` directly from the Node server.
 ## Directory Map
 
 - `src/server.js`: HTTP server, static file serving, API routing, in-memory index lifecycle, rate limiting, and admin reindex endpoint.
+- `src/base-path.js`: normalization and request routing for an optional base path (`BASE_PATH`), so the app can be mounted under a prefix such as `/ask-i18n`.
 - `src/api/`: public API request parsing.
 - `src/config.js`: `.env` parsing and runtime configuration assembly.
 - `src/db/store.js`: JSON index persistence and JSONL query logging.
@@ -72,6 +73,12 @@ Internal endpoints:
 - `POST /api/retrieve`: debug retrieval output.
 - `POST /api/ask`: browser UI answer endpoint.
 - `POST /api/admin/reindex`: token-protected reindex endpoint.
+
+### Base Path
+
+`BASE_PATH` (default empty) mounts the whole app under a prefix such as `/ask-i18n` for deployments such as `https://labs.w3.org/ask-i18n/`. `mountPath()` in `src/base-path.js` strips the prefix before routing; the check requires a `/` boundary, so `/ask-i18n-drafts/` is not treated as a match. Unprefixed paths keep working, which supports proxies that strip the prefix themselves, and the bare mount point redirects to the mount point with a trailing slash so relative URLs resolve.
+
+The browser side does not read `BASE_PATH`. `public/app.js` resolves API calls against `new URL('./', import.meta.url)`, and `public/index.html` refers to its assets relatively, so the UI follows wherever it is mounted. Keep `public/` free of root-absolute URLs (`/app.js`, `/api/ask`) or subpath deployments break.
 
 Retrieval scoring combines two signals:
 

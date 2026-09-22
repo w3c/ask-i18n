@@ -1,10 +1,12 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { normalizeBasePath } from './base-path.js';
 
 export function getConfig(overrides = {}) {
   const fileEnv = loadEnvFile(overrides.envFilePath || '.env');
   const env = { ...fileEnv, ...process.env };
   const config = {
     port: Number(firstDefined(overrides.port, env.PORT, 3000)),
+    basePath: normalizeBasePath(firstDefined(overrides.basePath, env.BASE_PATH, '')),
     indexPath: firstDefined(overrides.indexPath, env.INDEX_PATH, '.data/index.json'),
     queryLogPath: firstDefined(overrides.queryLogPath, env.QUERY_LOG_PATH, '.data/query-log.jsonl'),
     queryLogMaxBytes: Number(firstDefined(overrides.queryLogMaxBytes, env.QUERY_LOG_MAX_BYTES, 10 * 1024 * 1024)),

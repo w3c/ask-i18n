@@ -57,6 +57,7 @@ npm run start
 - `PUBLIC_BASE_URL=https://www.w3.org/International`
 - `MODEL_PROVIDER=local`
 - `TRUSTED_PROXIES=`（默认为空；忽略转发的客户端IP头）
+- `BASE_PATH=`（默认为空；设为`/ask-i18n`之类的子路径即可把应用部署在站点根路径之下）
 
 `.env.example`中的`SOURCES`配置示例启用了`i18n-drafts`、`bp-i18n-specdev`和`i18n-activity`的多源索引。其中`i18n-activity`源仅限于`i18n-wg`和`i18n-ig`文件夹。
 
@@ -81,6 +82,18 @@ TRUSTED_PROXIES=127.0.0.1/32,::1
 ```
 
 当此值未设置时，速率限制仅使用直连socket地址，以防止公共客户端伪造转发IP头绕过限制。
+
+## 部署在子路径下
+
+如果应用挂在站点根路径之下，例如通过labs代理部署在`https://labs.w3.org/ask-i18n/`，需要设置`BASE_PATH`：
+
+```sh
+BASE_PATH=/ask-i18n
+```
+
+此时界面和API都通过该前缀访问（`/ask-i18n/`、`/ask-i18n/api/v1/search`），直接访问不带斜杠的前缀会重定向到`/ask-i18n/`，以保证页面里的相对资源路径能正确解析。仅有相同前缀的其他路径（如`/ask-i18n-drafts/`）不受影响。
+
+两种代理方式都支持。如果代理转发前会剥掉前缀，保持`BASE_PATH`为空，应用继续在根路径提供服务；如果代理转发完整路径，则把`BASE_PATH`设为挂载的前缀。两种情况下不带前缀的路径都能继续访问，因此同一份代码既能在本地端口也能在子路径下运行。
 
 ## 命令
 

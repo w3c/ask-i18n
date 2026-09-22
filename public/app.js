@@ -1,6 +1,14 @@
 import { highlightCode } from './syntax-highlight.js';
 import { MESSAGES, applyUILanguage, detectUILanguage, getUILanguage, onUILanguageChange, t } from './i18n.js';
 
+// Resolve API calls against this module's own URL so the UI works both at the
+// site root and under a subpath such as /ask-i18n/ behind a reverse proxy.
+const APP_BASE_URL = new URL('./', import.meta.url);
+
+function apiUrl(path) {
+  return new URL(path.replace(/^\/+/, ''), APP_BASE_URL).href;
+}
+
 const form = typeof document === 'undefined' ? null : document.querySelector('#ask-form');
 const questionField = form?.elements.namedItem('question') || null;
 const submitButton = typeof document === 'undefined' ? null : document.querySelector('#submit-button');
@@ -213,7 +221,7 @@ function renderVoiceInputButton() {
 
 async function loadHealth() {
   try {
-    const health = await fetchJson('/api/health');
+    const health = await fetchJson(apiUrl('api/health'));
     lastHealth = health;
     renderHealth(health);
   } catch (error) {
@@ -246,7 +254,7 @@ async function ask() {
 
   try {
     const payload = formPayload();
-    const response = await fetchJson('/api/ask', {
+    const response = await fetchJson(apiUrl('api/ask'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(payload)

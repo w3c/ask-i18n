@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ask W3C i18n</title>
-  <link rel="stylesheet" href="/styles.css">
-  <script type="module" src="/app.js"></script>
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
 </head>
 <body>
   <a class="skip-link" href="#content" data-i18n="skipLink">Skip to content</a>
@@ -63,7 +63,7 @@
   <main id="content" class="app-shell" tabindex="-1">
     <section class="workspace">
       <search class="query-panel" data-i18n-aria-label="searchAriaLabel" aria-label="Ask W3C Internationalization sources">
-        <form id="ask-form" action="/api/ask" method="post">
+        <form id="ask-form" action="api/ask" method="post">
           <div class="field">
             <label for="question" data-i18n="questionLabel">Question</label>
             <textarea id="question" name="question" rows="5" minlength="3" required enterkeyhint="send" aria-describedby="question-help">How should I declare UTF-8 character encoding in HTML?</textarea>

@@ -39,6 +39,20 @@ test('public UI omits the retired retrieved-sources panel', async () => {
   assert.doesNotMatch(page, /Inspect retrieval/);
 });
 
+test('public UI loads its assets and API relative to its mount path', async () => {
+  const [page, app] = await Promise.all([
+    readFile(new URL('../public/index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../public/app.js', import.meta.url), 'utf8')
+  ]);
+
+  assert.doesNotMatch(page, /(?:href|src|action)="\/[^/]/);
+  assert.match(page, /<link rel="stylesheet" href="styles\.css">/);
+  assert.match(page, /<script type="module" src="app\.js"><\/script>/);
+  assert.match(page, /<form id="ask-form" action="api\/ask" method="post">/);
+  assert.match(app, /new URL\('\.\/', import\.meta\.url\)/);
+  assert.doesNotMatch(app, /fetchJson\('\/api/);
+});
+
 test('public UI keeps the main ask flow accessible', async () => {
   const page = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
 

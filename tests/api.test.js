@@ -87,6 +87,70 @@ test('HTTP API serves health, retrieval, and cited answers without fetching sour
   }
 });
 
+test('UI, static assets, and API are served under a configured base path', async () => {
+  const index = await buildIndex({
+    sourceRoot: fixtureRoot,
+    publicBaseUrl: 'https://www.w3.org/International',
+    sourceMode: 'local',
+    sourceRef: 'fixture',
+    sourceCommit: 'fixture-sha',
+    write: false
+  });
+  const app = createServer({
+    index,
+    config: fixtureConfig({ basePath: '/ask-i18n' })
+  });
+  app.listen(0, '127.0.0.1');
+  await once(app, 'listening');
+  const { port } = app.address();
+  const origin = `http://127.0.0.1:${port}`;
+
+  try {
+    const page = await fetch(`${origin}/ask-i18n/`).then((response) => response.text());
+    assert.match(page, /<title>Ask W3C i18n<\/title>/);
+
+    const script = await fetch(`${origin}/ask-i18n/app.js`);
+    assert.equal(script.status, 200);
+
+    const health = await fetch(`${origin}/ask-i18n/api/v1/health`).then((response) => response.json());
+    assert.equal(health.ok, true);
+    assert.equal(health.index.indexed_documents, 4);
+
+    const answer = await fetch(`${origin}/ask-i18n/api/v1/answer`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ question: 'How should I declare UTF-8 character encoding?', language: 'en' })
+    }).then((response) => response.json());
+    assert.equal(answer.evidence_status, 'supported');
+
+    const redirect = await fetch(`${origin}/ask-i18n`, { redirect: 'manual' });
+    assert.equal(redirect.status, 308);
+    assert.equal(redirect.headers.get('location'), '/ask-i18n/');
+  } finally {
+    app.close();
+  }
+});
+
+test('a proxy that strips the base path still reaches the unprefixed routes', async () => {
+  const app = createServer({
+    index: null,
+    config: fixtureConfig({ basePath: '/ask-i18n' })
+  });
+  app.listen(0, '127.0.0.1');
+  await once(app, 'listening');
+  const { port } = app.address();
+
+  try {
+    const health = await fetch(`http://127.0.0.1:${port}/api/health`).then((response) => response.json());
+    assert.equal(health.ok, false);
+
+    const page = await fetch(`http://127.0.0.1:${port}/`).then((response) => response.text());
+    assert.match(page, /<title>Ask W3C i18n<\/title>/);
+  } finally {
+    app.close();
+  }
+});
+
 test('community API exposes versioned health, search, answer, and OpenAPI contracts', async () => {
   const index = await buildIndex({
     sourceRoot: fixtureRoot,
@@ -210,6 +274,29 @@ test('community API rate limit errors use the community envelope', async () => {
     assert.equal(body.error.code, 'rate_limit_exceeded');
     assert.equal(body.error.language, 'en');
     assert.equal(body.error.direction, 'ltr');
+  } finally {
+    app.close();
+  }
+});
+
+test('community API rate limit errors still use the community envelope under a base path', async () => {
+  const app = createServer({
+    index: null,
+    config: fixtureConfig({ rateLimitMax: 1, basePath: '/ask-i18n' })
+  });
+  app.listen(0, '127.0.0.1');
+  await once(app, 'listening');
+  const { port } = app.address();
+
+  try {
+    const first = await fetch(`http://127.0.0.1:${port}/ask-i18n/api/v1/health`);
+    const limited = await fetch(`http://127.0.0.1:${port}/ask-i18n/api/v1/health`);
+    const body = await limited.json();
+
+    assert.equal(first.status, 200);
+    assert.equal(limited.status, 429);
+    assert.equal(limited.headers.get('access-control-allow-origin'), '*');
+    assert.equal(body.error.code, 'rate_limit_exceeded');
   } finally {
     app.close();
   }

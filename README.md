@@ -57,6 +57,7 @@ Important defaults:
 - `PUBLIC_BASE_URL=https://www.w3.org/International`
 - `MODEL_PROVIDER=local`
 - `TRUSTED_PROXIES=` (empty by default; forwarded client IP headers are ignored)
+- `BASE_PATH=` (empty by default; set a subpath such as `/ask-i18n` to serve the app below the site root)
 
 The example `SOURCES` configuration enables multi-source indexing for `i18n-drafts`, `bp-i18n-specdev`, and `i18n-activity`. The `i18n-activity` source is limited to the `i18n-wg` and `i18n-ig` folders.
 
@@ -81,6 +82,18 @@ TRUSTED_PROXIES=127.0.0.1/32,::1
 ```
 
 When this is unset, rate limiting deliberately uses the direct socket address only so public clients cannot spoof forwarded IP headers to bypass limits.
+
+## Serving under a subpath
+
+Set `BASE_PATH` when the app is mounted below the site root, for example behind the labs proxy at `https://labs.w3.org/ask-i18n/`:
+
+```sh
+BASE_PATH=/ask-i18n
+```
+
+The UI and API then answer under that prefix (`/ask-i18n/`, `/ask-i18n/api/v1/search`), and a request for the bare prefix redirects to `/ask-i18n/` so the page's relative asset URLs resolve. A path that only shares a prefix, such as `/ask-i18n-drafts/`, is not affected.
+
+Both proxy styles work. If the proxy strips the prefix before forwarding, leave `BASE_PATH` empty and the app keeps serving at the root. If the proxy forwards the full path, set `BASE_PATH` to the mounted prefix. Unprefixed paths keep working in either case, so the same build runs on a local port and behind a subpath.
 
 ## Commands
 
