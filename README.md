@@ -5,7 +5,7 @@
 Ask W3C i18n answers questions about W3C Internationalization guidance with source-grounded citations and source status.
 
 <p align="center">
-  <a href="https://i18n-drafts-assistant.onrender.com/"><strong>Try it online</strong></a>
+  <a href="https://ask-i18n.onrender.com/"><strong>Try it online</strong></a>
 </p>
 
 > **Experimental tool:** This is an experimental tool from the [W3C Internationalization Activity](https://www.w3.org/International/). Its answers are not W3C standards or official W3C positions.
@@ -122,13 +122,13 @@ The stable community API is versioned under `/api/v1`. It uses the latest loaded
 OpenAPI documentation is available at:
 
 ```sh
-curl https://i18n-drafts-assistant.onrender.com/api/openapi.json
+curl https://ask-i18n.onrender.com/api/openapi.json
 ```
 
 Search indexed source sections:
 
 ```sh
-curl "https://i18n-drafts-assistant.onrender.com/api/v1/search?q=declare%20UTF-8&language=en&status=published&limit=5"
+curl "https://ask-i18n.onrender.com/api/v1/search?q=declare%20UTF-8&language=en&status=published&limit=5"
 ```
 
 Search returns ranked snippets, not full debug chunks:
@@ -159,7 +159,7 @@ Search returns ranked snippets, not full debug chunks:
 Answer a question with citations:
 
 ```sh
-curl -X POST https://i18n-drafts-assistant.onrender.com/api/v1/answer \
+curl -X POST https://ask-i18n.onrender.com/api/v1/answer \
   -H "content-type: application/json" \
   -d '{"question":"How should I declare UTF-8 character encoding?","language":"en","statuses":["published"]}'
 ```

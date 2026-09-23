@@ -5,7 +5,7 @@
 Ask W3C i18n是一个关于W3C国际化的问答工具，基于源文档提供答案并附有引用和来源的状态。
 
 <p align="center">
-  <a href="https://i18n-drafts-assistant.onrender.com/"><strong>在线版在这里</strong></a>
+  <a href="https://ask-i18n.onrender.com/"><strong>在线版在这里</strong></a>
 </p>
 
 > **实验性工具：** 本项目是[W3C国际化标准计划](https://www.w3.org/International/)的实验性工具，回答不代表W3C标准或W3C官方立场。
@@ -123,13 +123,13 @@ Playwright E2E 测试使用同样的 fixture 语料，并启动真实服务。�
 OpenAPI文档可通过以下地址获取：
 
 ```sh
-curl https://i18n-drafts-assistant.onrender.com/api/openapi.json
+curl https://ask-i18n.onrender.com/api/openapi.json
 ```
 
 搜索已索引的源文档章节：
 
 ```sh
-curl "https://i18n-drafts-assistant.onrender.com/api/v1/search?q=declare%20UTF-8&language=en&status=published&limit=5"
+curl "https://ask-i18n.onrender.com/api/v1/search?q=declare%20UTF-8&language=en&status=published&limit=5"
 ```
 
 搜索返回排序的摘要片段，而非完整的调试块：
@@ -160,7 +160,7 @@ curl "https://i18n-drafts-assistant.onrender.com/api/v1/search?q=declare%20UTF-8
 回答问题并附有引用：
 
 ```sh
-curl -X POST https://i18n-drafts-assistant.onrender.com/api/v1/answer \
+curl -X POST https://ask-i18n.onrender.com/api/v1/answer \
   -H "content-type: application/json" \
   -d '{"question":"How should I declare UTF-8 character encoding?","language":"en","statuses":["published"]}'
 ```
