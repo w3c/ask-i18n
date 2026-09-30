@@ -7,9 +7,11 @@ test('ask flow renders a cited answer from the indexed sources', async ({ page }
 
   await expect(page.locator('#health-status')).toContainText('4 documents and 5 chunks');
 
+  await page.locator('#question').fill(UTF8_QUESTION);
   await page.locator('#submit-button').click();
 
   await expect(page.locator('#answer')).toContainText('UTF-8');
+  await expect(page.locator('#answer-heading')).toBeFocused();
   const citation = page.locator('#citation-1');
   await expect(citation).toBeVisible();
   await expect(citation.locator('a')).toHaveAttribute('href', /http-charset/);
@@ -22,11 +24,27 @@ test('switching the UI language localizes the interface', async ({ page }) => {
 
   await expect(page.locator('#submit-button')).toHaveText('提问');
   await expect(page.locator('label[for="question"]')).toHaveText('问题');
-  await expect(page.locator('#question')).toHaveValue('如何在HTML中设置内容的语言？');
+  await expect(page.locator('#question')).toHaveValue('');
+  await expect(page.locator('#question')).toHaveAttribute('placeholder', '如何在HTML中设置内容的语言？');
   await expect(page.locator('.header-link img')).toBeVisible();
 
   await page.locator('#ui-language').selectOption('en');
-  await expect(page.locator('#question')).toHaveValue(UTF8_QUESTION);
+  await expect(page.locator('#question')).toHaveAttribute('placeholder', UTF8_QUESTION);
+});
+
+test('mobile keeps the ask action visible before collapsed settings', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+
+  await expect(page.locator('#submit-button')).toBeVisible();
+  const submitBox = await page.locator('#submit-button').boundingBox();
+  expect(submitBox?.y + (submitBox?.height || 0)).toBeLessThan(844);
+  await expect(page.locator('.settings-disclosure')).not.toHaveAttribute('open', '');
+  await expect(page.locator('#language')).not.toBeVisible();
+  await expect(page.locator('.shortcut-hint')).not.toBeVisible();
+
+  await page.locator('.settings-disclosure summary').click();
+  await expect(page.locator('#language')).toBeVisible();
 });
 
 test('switching the UI language defaults the answer language to match', async ({ page }) => {
@@ -44,6 +62,7 @@ test('switching the UI language defaults the answer language to match', async ({
 test('a manually chosen answer language survives UI language switches', async ({ page }) => {
   await page.goto('/');
 
+  await page.locator('.settings-disclosure summary').click();
   await page.locator('#language').selectOption('fr');
   await page.locator('#ui-language').selectOption('zh-hans');
 
@@ -62,6 +81,8 @@ test('switching the UI language preserves a typed question', async ({ page }) =>
 test('answer language follows the selected answer language', async ({ page }) => {
   await page.goto('/');
 
+  await page.locator('#question').fill(UTF8_QUESTION);
+  await page.locator('.settings-disclosure summary').click();
   await page.locator('#language').selectOption('zh-hans');
   await page.locator('#submit-button').click();
   await expect(page.locator('#answer')).toHaveAttribute('lang', 'zh-hans');
@@ -90,6 +111,7 @@ test('a whitespace-only question shows a validation error without sending a requ
 test('Control+Enter submits the question', async ({ page }) => {
   await page.goto('/');
 
+  await page.locator('#question').fill(UTF8_QUESTION);
   await page.locator('#question').press('Control+Enter');
 
   await expect(page.locator('#answer')).toContainText('UTF-8');

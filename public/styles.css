@@ -41,7 +41,7 @@
   --code-text: oklch(95% 0.01 248);
   --shadow: 0 1px 2px oklch(28% 0.04 258 / 0.06), 0 10px 28px oklch(28% 0.04 258 / 0.07);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 * {
@@ -305,6 +305,11 @@ select:hover {
   border-color: color-mix(in oklab, var(--field-border) 65%, var(--accent));
 }
 
+textarea::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
 textarea {
   resize: vertical;
   line-height: 1.5;
@@ -368,6 +373,28 @@ kbd {
   grid-template-columns: minmax(12rem, 0.9fr) minmax(18rem, 1.25fr) minmax(15rem, 1fr);
   gap: 0.85rem;
   margin-block-start: 1rem;
+}
+
+.settings-disclosure {
+  margin-block-start: 0.5rem;
+  border-block-start: 1px solid var(--border);
+}
+
+.settings-disclosure summary {
+  min-block-size: 44px;
+  padding-block: 0.65rem 0.4rem;
+  color: var(--accent);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.settings-disclosure[open] summary {
+  margin-block-end: 0.25rem;
+}
+
+.settings-disclosure .control-grid {
+  margin-block-start: 0;
 }
 
 fieldset {
@@ -507,6 +534,12 @@ button:disabled {
   font-size: 1.05rem;
   line-height: 1.2;
   text-wrap: balance;
+}
+
+.answer-panel h2:focus {
+  border-radius: 2px;
+  outline: 3px solid var(--accent-ring);
+  outline-offset: 4px;
 }
 
 .answer-contract {
@@ -811,6 +844,15 @@ button:disabled {
 
   .actions button {
     inline-size: 100%;
+    min-block-size: 48px;
+  }
+
+  .shortcut-hint {
+    display: none;
+  }
+
+  .voice-input {
+    min-block-size: 48px;
   }
 
   .answer-panel__header {
@@ -825,7 +867,7 @@ button:disabled {
 
   .choice-group label {
     display: flex;
-    min-block-size: 44px;
+    min-block-size: 48px;
   }
 }
 

@@ -12,6 +12,7 @@ function apiUrl(path) {
 const form = typeof document === 'undefined' ? null : document.querySelector('#ask-form');
 const questionField = form?.elements.namedItem('question') || null;
 const submitButton = typeof document === 'undefined' ? null : document.querySelector('#submit-button');
+const answerHeading = typeof document === 'undefined' ? null : document.querySelector('#answer-heading');
 const uiLanguageSelect = typeof document === 'undefined' ? null : document.querySelector('#ui-language');
 const answerLanguageSelect = form?.elements.namedItem('language') || null;
 const messageArea = typeof document === 'undefined' ? null : document.querySelector('#message-area');
@@ -263,6 +264,7 @@ async function ask() {
     lastResponse = response;
     lastPayload = payload;
     renderAnswer(response, payload.language);
+    answerHeading?.focus();
     setMessage(response.evidence_status === 'insufficient_evidence' ? t('noSupportedAnswer') : '', '');
   } catch (error) {
     setMessage(error.message, 'error');

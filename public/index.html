@@ -66,7 +66,7 @@
         <form id="ask-form" action="api/ask" method="post">
           <div class="field">
             <label for="question" data-i18n="questionLabel">Question</label>
-            <textarea id="question" name="question" rows="5" minlength="3" required enterkeyhint="send" aria-describedby="question-help">How should I declare UTF-8 character encoding in HTML?</textarea>
+            <textarea id="question" name="question" rows="5" minlength="3" required enterkeyhint="enter" aria-describedby="question-help" placeholder="How should I declare UTF-8 character encoding in HTML?" data-i18n-placeholder="sampleQuestion"></textarea>
             <div class="field-tools">
               <p id="question-help" class="hint">
                 <span data-i18n="questionHelp">Answers are grounded only in indexed W3C Internationalization sources.</span>
@@ -80,42 +80,45 @@
             </div>
           </div>
 
-          <div class="control-grid">
-            <div class="field">
-              <label for="language" data-i18n="answerLanguageLabel">Answer language</label>
-              <select id="language" name="language">
-                <option value="ar">العربية</option>
-                <option value="en" selected>English</option>
-                <option value="es">Español</option>
-                <option value="fr">Français</option>
-                <option value="he">עברית</option>
-                <option value="ja">日本語</option>
-                <option value="ko">한국어</option>
-                <option value="zh-hans">简体中文</option>
-                <option value="zh-hant">繁體中文</option>
-              </select>
-            </div>
-
-            <fieldset class="status-filters">
-              <legend data-i18n="statusLegend">Source status</legend>
-              <div class="choice-group">
-                <label><input type="checkbox" name="statuses" value="published" checked> <span data-i18n="statusPublished">Published</span></label>
-                <label><input type="checkbox" name="statuses" value="review" checked> <span data-i18n="statusReview">Review</span></label>
-                <label><input type="checkbox" name="statuses" value="draft" checked> <span data-i18n="statusDraft">Draft</span></label>
-              </div>
-            </fieldset>
-
-            <fieldset class="obsolete-filter">
-              <legend data-i18n="advancedLegend">Advanced</legend>
-              <div class="choice-group">
-                <label><input type="checkbox" id="include-obsolete" name="includeObsolete"> <span data-i18n="includeObsolete">Include obsolete content</span></label>
-              </div>
-            </fieldset>
-          </div>
-
           <div class="actions">
             <button id="submit-button" type="submit" aria-keyshortcuts="Control+Enter Meta+Enter" data-i18n="submitButton">Ask from sources</button>
           </div>
+
+          <details class="settings-disclosure">
+            <summary data-i18n="settingsSummary">Answer and source options</summary>
+            <div class="control-grid">
+              <div class="field">
+                <label for="language" data-i18n="answerLanguageLabel">Answer language</label>
+                <select id="language" name="language">
+                  <option value="ar">العربية</option>
+                  <option value="en" selected>English</option>
+                  <option value="es">Español</option>
+                  <option value="fr">Français</option>
+                  <option value="he">עברית</option>
+                  <option value="ja">日本語</option>
+                  <option value="ko">한국어</option>
+                  <option value="zh-hans">简体中文</option>
+                  <option value="zh-hant">繁體中文</option>
+                </select>
+              </div>
+
+              <fieldset class="status-filters">
+                <legend data-i18n="statusLegend">Source status</legend>
+                <div class="choice-group">
+                  <label><input type="checkbox" name="statuses" value="published" checked> <span data-i18n="statusPublished">Published</span></label>
+                  <label><input type="checkbox" name="statuses" value="review" checked> <span data-i18n="statusReview">Review</span></label>
+                  <label><input type="checkbox" name="statuses" value="draft" checked> <span data-i18n="statusDraft">Draft</span></label>
+                </div>
+              </fieldset>
+
+              <fieldset class="obsolete-filter">
+                <legend data-i18n="advancedLegend">Advanced</legend>
+                <div class="choice-group">
+                  <label><input type="checkbox" id="include-obsolete" name="includeObsolete"> <span data-i18n="includeObsolete">Include obsolete content</span></label>
+                </div>
+              </fieldset>
+            </div>
+          </details>
         </form>
       </search>
 
@@ -123,7 +126,7 @@
 
       <section class="answer-panel" aria-labelledby="answer-heading">
         <div class="answer-panel__header">
-          <h2 id="answer-heading" data-i18n="answerHeading">Answer</h2>
+          <h2 id="answer-heading" tabindex="-1" data-i18n="answerHeading">Answer</h2>
           <!-- <span class="answer-contract">Cited sources required</span> -->
         </div>
         <div id="warnings" class="warnings" aria-live="polite"></div>
