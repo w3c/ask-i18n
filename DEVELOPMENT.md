@@ -122,7 +122,9 @@ npx playwright install chromium firefox webkit
 npm run test:e2e
 ```
 
-The Playwright config starts the real server (`npm run index && npm start`) against the `i18n-mini` fixture with environment overrides in `playwright.config.js` (port 4123, `.data/e2e-index.json`, local model provider, relaxed rate limit).
+The Playwright config starts the real server (`npm run index && npm start`) against the `i18n-mini` fixture with a local model provider and relaxed rate limit. Each run uses an OS-assigned port (`PORT=0`); Playwright captures the actual port from the startup message and passes it to the browser tests via `ASK_I18N_E2E_PORT`. Existing servers are never reused.
+
+Each E2E run keeps its index, query log, test results, and HTML report under a unique `.data/e2e/<run-id>/` directory. Workers inherit `ASK_I18N_E2E_RUN_DIR` to share only their own run’s artifacts. Leave these internal environment variables unset when starting independent runs. API tests use a unique system temporary directory per process and separate log filenames per server configuration, including tests with custom configuration. Artifacts are retained for inspection; parallel runs do not overwrite them.
 
 The E2E tests cover the ask flow, UI and answer language switching, validation, the keyboard shortcut, and the insufficient-evidence state.
 

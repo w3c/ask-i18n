@@ -363,6 +363,6 @@ if (process.argv[1] === currentFile) {
 
   const server = createServer({ index, config });
   server.listen(config.port, () => {
-    console.log(`Ask W3C i18n listening at http://127.0.0.1:${config.port}`);
+    console.log(`Ask W3C i18n listening at http://127.0.0.1:${server.address().port}`);
   });
 }

@@ -1,10 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { buildIndex } from '../src/indexing/indexer.js';
 import { createServer } from '../src/server.js';
 
 const fixtureRoot = new URL('./fixtures/i18n-mini/', import.meta.url).pathname;
+
+const runDirectory = mkdtempSync(join(tmpdir(), 'ask-i18n-api-'));
 
 function fixtureConfig(overrides = {}) {
   return {
@@ -15,7 +21,7 @@ function fixtureConfig(overrides = {}) {
     sourceRef: 'fixture',
     sourceRepoUrl: '',
     sourceCommit: 'fixture-sha',
-    queryLogPath: '/private/tmp/i18n-drafts-assistant-api-test-query-log.jsonl',
+    queryLogPath: join(runDirectory, `${randomUUID()}.jsonl`),
     rateLimitWindowMs: 60_000,
     rateLimitMax: 20,
     ...overrides
@@ -34,6 +40,7 @@ test('HTTP API serves health, retrieval, and cited answers without fetching sour
   const app = createServer({
     index,
     config: {
+      ...fixtureConfig(),
       enableDebug: true,
       modelProvider: 'local',
       publicBaseUrl: 'https://www.w3.org/International',
@@ -306,6 +313,7 @@ test('HTTP API preserves expected API error status codes', async () => {
   const app = createServer({
     index: null,
     config: {
+      ...fixtureConfig(),
       enableDebug: true,
       modelProvider: 'local',
       publicBaseUrl: 'https://www.w3.org/International',
@@ -341,6 +349,7 @@ test('HTTP API exposes whether the app is running as a pull request preview', as
   const app = createServer({
     index: null,
     config: {
+      ...fixtureConfig(),
       enableDebug: true,
       modelProvider: 'local',
       publicBaseUrl: 'https://www.w3.org/International',
@@ -456,6 +465,7 @@ test('HTTP API ask returns when the model provider times out', async () => {
   const app = createServer({
     index,
     config: {
+      ...fixtureConfig(),
       enableDebug: true,
       modelProvider: 'openai-compatible',
       modelApiKey: 'test-key',
@@ -510,6 +520,7 @@ test('HTTP API rate limiter keys requests by forwarded client only from trusted 
   const app = createServer({
     index: null,
     config: {
+      ...fixtureConfig(),
       enableDebug: true,
       modelProvider: 'local',
       publicBaseUrl: 'https://www.w3.org/International',
@@ -549,6 +560,7 @@ test('HTTP API rate limiter uses the nearest untrusted forwarded hop', async () 
   const app = createServer({
     index: null,
     config: {
+      ...fixtureConfig(),
       enableDebug: true,
       modelProvider: 'local',
       publicBaseUrl: 'https://www.w3.org/International',
@@ -588,6 +600,7 @@ test('HTTP API rate limiter ignores forwarded headers from untrusted peers', asy
   const app = createServer({
     index: null,
     config: {
+      ...fixtureConfig(),
       enableDebug: true,
       modelProvider: 'local',
       publicBaseUrl: 'https://www.w3.org/International',

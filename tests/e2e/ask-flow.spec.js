@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+test.use({ baseURL: `http://127.0.0.1:${process.env.ASK_I18N_E2E_PORT}` });
+
 const UTF8_QUESTION = 'How should I declare UTF-8 character encoding in HTML?';
 
 test('ask flow renders a cited answer from the indexed sources', async ({ page }) => {
