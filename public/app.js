@@ -424,13 +424,14 @@ export function markdownToHtml(markdown) {
       continue;
     }
 
-    const fence = lines[index].match(/^```([A-Za-z0-9_-]+)?\s*$/);
+    const fence = matchCodeFence(lines[index]);
     if (fence) {
-      const languageName = fence[1] ? fence[1].toLowerCase() : '';
+      const languageName = fence[2].trim().split(/\s+/)[0].toLowerCase();
       const language = languageName ? ` class="language-${escapeAttribute(languageName)}"` : '';
+      const closingFence = new RegExp('^`{' + fence[1].length + ',}\\s*$');
       const codeLines = [];
       index += 1;
-      while (index < lines.length && !/^```\s*$/.test(lines[index])) {
+      while (index < lines.length && !closingFence.test(lines[index])) {
         codeLines.push(lines[index]);
         index += 1;
       }
@@ -496,8 +497,12 @@ function renderParagraphs(lines) {
     .join('');
 }
 
+function matchCodeFence(line) {
+  return line.match(/^(`{3,})([^`]*)$/);
+}
+
 function isBlockStart(line) {
-  return /^```/.test(line) ||
+  return Boolean(matchCodeFence(line)) ||
     /^(#{1,6})\s+/.test(line) ||
     /^\s*[-*+]\s+/.test(line) ||
     /^\s*\d+[.)]\s+/.test(line) ||

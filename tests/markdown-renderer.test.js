@@ -1,6 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { markdownToHtml } from '../public/markdown.js';
+
+// Keep parser regressions bounded even if a synchronous loop stops advancing.
+function renderMarkdownWithTimeout(markdown) {
+  const moduleUrl = new URL('../public/markdown.js', import.meta.url).href;
+  return execFileSync(process.execPath, ['--input-type=module', '-e', `
+    import { markdownToHtml } from ${JSON.stringify(moduleUrl)};
+    process.stdout.write(markdownToHtml(${JSON.stringify(markdown)}));
+  `], { encoding: 'utf8', timeout: 2000 });
+}
 
 test('renders common answer markdown as semantic HTML', () => {
   const html = markdownToHtml(`## Encoding
@@ -84,4 +94,42 @@ test('keeps unsupported fenced languages escaped without highlighting', () => {
 
   assert.match(html, /<code class="language-javascript">const value = &quot;&lt;safe&gt;&quot;;<\/code>/);
   assert.equal(html.includes('class="token'), false);
+});
+
+test('renders fenced languages with punctuation without hanging', () => {
+  for (const language of ['c++', 'c#', 'objective.c']) {
+    const html = renderMarkdownWithTimeout(`Before\n\`\`\`${language}\n<safe> [1]\n\`\`\`\nAfter`);
+
+    assert.equal(html, `<p>Before</p><pre><code class="language-${language}">&lt;safe&gt; [1]</code></pre><p>After</p>`);
+  }
+});
+
+test('uses the first word of fence info and escapes it in the language attribute', () => {
+  const html = renderMarkdownWithTimeout('``` C++ title="example"\n<safe>\n```');
+  assert.equal(html, '<pre><code class="language-c++">&lt;safe&gt;</code></pre>');
+
+  const escaped = renderMarkdownWithTimeout('```c++"onclick="alert(1)\n<safe>\n```');
+  assert.equal(escaped, '<pre><code class="language-c++&quot;onclick=&quot;alert(1)">&lt;safe&gt;</code></pre>');
+});
+
+test('longer fences preserve shorter fences and accept matching or longer closers', () => {
+  for (const closer of ['````', '`````']) {
+    const html = renderMarkdownWithTimeout(`\`\`\`\`markdown\n\`\`\`html\n<safe>\n\`\`\`\n${closer}\nAfter`);
+
+    assert.equal(html, '<pre><code class="language-markdown">```html\n&lt;safe&gt;\n```</code></pre><p>After</p>');
+  }
+});
+
+test('unclosed fences render the remaining lines as escaped code', () => {
+  const html = renderMarkdownWithTimeout('```c#\n<safe>\n\nRemaining code');
+
+  assert.equal(html, '<pre><code class="language-c#">&lt;safe&gt;\n\nRemaining code</code></pre>');
+});
+
+test('invalid backtick fence info falls back to text without hanging', () => {
+  const html = renderMarkdownWithTimeout('Before\n```html`invalid\n\nAfter');
+
+  assert.equal(html.includes('<pre>'), false);
+  assert.match(html, /invalid/);
+  assert.match(html, /<p>After<\/p>$/);
 });
