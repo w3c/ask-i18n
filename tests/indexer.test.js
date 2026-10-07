@@ -14,6 +14,7 @@ test('content discovery indexes primary content roots and skips support data HTM
 
   assert(files.includes('articles/http-charset/index.en.html'));
   assert(files.includes('questions/qa-link-lang.en.html'));
+  assert(files.includes('nav/about.html'));
   assert(!files.includes('articles/http-charset/index-data/example.html'));
 });
 
@@ -95,7 +96,7 @@ test('indexer builds documents and chunks with source metadata', async () => {
   assert.equal(index.source.mode, 'local');
   assert.equal(index.source.ref, 'fixture');
   assert.equal(index.source.commit, 'fixture-sha');
-  assert.equal(index.documents.length, 4);
+  assert.equal(index.documents.length, 5);
   assert(index.chunks.some((chunk) => chunk.chunk_id === 'articles/http-charset/index.en.html#charset'));
   assert(index.documents.some((doc) => doc.translation_state === 'out_of_date'));
   assert.equal(index.summary.skipped, 1);

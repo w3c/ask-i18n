@@ -1,4 +1,4 @@
-import { cosineSimilarity, hashedVector, keywordMatchStats, normalizeQuery, tokenize } from './text.js';
+import { cosineSimilarity, definitionTopic, hashedVector, keywordMatchStats, normalizeQuery, tokenize } from './text.js';
 
 const DEFAULT_STATUSES = ['published', 'review', 'draft'];
 const FIELD_WEIGHTS = {
@@ -23,7 +23,8 @@ export function retrieve({
   limit = 10
 }) {
   const normalizedQuery = normalizeQuery(query);
-  const queryTokens = tokenize(normalizedQuery);
+  const topic = definitionTopic(normalizedQuery);
+  const queryTokens = tokenize(topic || normalizedQuery);
   const queryVector = hashedVector(queryTokens);
   const allowedStatuses = new Set((statuses?.length ? statuses : DEFAULT_STATUSES).map((status) => String(status).toLowerCase()));
   const requestedLanguage = String(language || 'en').toLowerCase();
@@ -38,7 +39,7 @@ export function retrieve({
       const keywordStats = keywordMatchStats(queryTokens, candidate.searchable);
       const keyword = bm25FieldScore(queryTokens, candidate.fields, corpusStats) +
         titleCoverageBoost(queryTokens, candidate.fields.title) +
-        sectionIntentBoost(candidate.chunk.heading_path);
+        sectionIntentBoost(candidate.chunk.heading_path, topic);
       // Hash-bucket vector similarity catches broader token overlap while the
       // keyword gate below keeps weak accidental hash collisions from ranking.
       const vector = cosineSimilarity(queryVector, hashedVector(candidate.allTokens));
@@ -179,8 +180,16 @@ function titleCoverageBoost(queryTokens, titleTokens) {
   return (matches / uniqueQueryTokens.length) * 0.75;
 }
 
-function sectionIntentBoost(headingPath = []) {
+function sectionIntentBoost(headingPath = [], topic = '') {
   const heading = String(headingPath[headingPath.length - 1] || '').trim().toLowerCase();
+  if (topic) {
+    const topicTokens = new Set(tokenize(topic));
+    const headingTokens = new Set(tokenize(heading));
+    if (topicTokens.size > 0 && topicTokens.size === headingTokens.size &&
+      [...topicTokens].every((token) => headingTokens.has(token))) {
+      return definitionTopic(heading) ? 2 : 1;
+    }
+  }
   if (heading === 'quick answer') return 0.6;
   if (heading === 'answer') return 0.15;
   return 0;

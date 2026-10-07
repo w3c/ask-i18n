@@ -18,6 +18,7 @@ Ask W3C i18n是一个关于W3C国际化的问答工具，基于源文档提供�
 - 如何在HTML中声明UTF-8编码？
 - 什么是字符集？
 - 什么是BOM？
+- 什么是i18n？
 - 什么是ruby？
 - 国际化工作组都做什么？
 - 当HTTP Content-Type、BOM和`<meta charset>`不一致时，哪个里面的编码优先？

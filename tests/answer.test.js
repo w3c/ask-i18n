@@ -4,6 +4,59 @@ import { answerFromRetrieval } from '../src/generation/answer.js';
 import { validateCitationsForEvidence } from '../src/generation/citations.js';
 import { buildPrompt } from '../src/generation/prompt.js';
 import { retrieve } from '../src/retrieval/hybrid.js';
+import { buildIndex } from '../src/indexing/indexer.js';
+
+test('i18n definition answers cite the indexed about page definition section', async () => {
+  const index = await buildIndex({
+    sourceRoot: new URL('./fixtures/i18n-mini/', import.meta.url).pathname,
+    write: false
+  });
+
+  for (const question of ['what is i18n', 'What is i18n?', 'What is internationalization?']) {
+    const retrieval = retrieve({ query: question, chunks: index.chunks, limit: 8 });
+    const response = await answerFromRetrieval({ question, retrieval, chunks: index.chunks });
+
+    assert.equal(response.evidence_status, 'supported', question);
+    assert.equal(response.citations[0]?.url, 'https://www.w3.org/International/i18n-drafts/nav/about#what', question);
+    assert.match(response.answer, /design or develop/);
+    assert.doesNotMatch(response.answer, /Surprised|Let me explain|Active groups/);
+  }
+});
+
+test('external-model context supplies the i18n definition as the first citation', async () => {
+  const index = await buildIndex({
+    sourceRoot: new URL('./fixtures/i18n-mini/', import.meta.url).pathname,
+    write: false
+  });
+  const question = 'what is i18n';
+  const retrieval = retrieve({ query: question, chunks: index.chunks });
+  const previousFetch = globalThis.fetch;
+  let requestBody;
+  globalThis.fetch = async (_url, options) => {
+    requestBody = JSON.parse(options.body);
+    return {
+      ok: true,
+      json: async () => ({ choices: [{ message: { content: 'Internationalization means designing content for users from any culture, region, or language. [1]' } }] })
+    };
+  };
+
+  try {
+    const response = await answerFromRetrieval({
+      question,
+      retrieval,
+      chunks: index.chunks,
+      modelProvider: 'openai-compatible',
+      modelApiKey: 'fixture-key',
+      modelBaseUrl: 'https://example.invalid/v1'
+    });
+    const context = requestBody.messages.find((message) => message.role === 'user').content;
+    assert.match(context, /\[1\][\s\S]*?Section: What is Internationalization\?[\s\S]*?URL: https:\/\/www\.w3\.org\/International\/i18n-drafts\/nav\/about#what/);
+    assert.match(context, /design or develop/);
+    assert.equal(response.citations[0]?.url, 'https://www.w3.org/International/i18n-drafts/nav/about#what');
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});
 
 const reviewChunk = {
   chunk_id: 'questions/qa-link-lang.en.html#link-language',

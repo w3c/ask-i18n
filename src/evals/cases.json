@@ -1,5 +1,15 @@
 [
   {
+    "category": "internationalization definition",
+    "question": "what is i18n",
+    "language": "en",
+    "required_source_paths": ["nav/about.html"],
+    "expected_evidence_status": "supported",
+    "expected_warning_types": [],
+    "expected_answer_terms": ["internationalize", "design or develop"],
+    "notes": "Definition intent should select the about page definition rather than incidental i18n mentions."
+  },
+  {
     "category": "character encoding",
     "question": "How should I declare UTF-8 character encoding in HTML?",
     "language": "en",

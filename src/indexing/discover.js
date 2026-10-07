@@ -7,6 +7,7 @@ export const CONTENT_ROOTS = new Set([
   'questions',
   'tutorials',
   'getting-started',
+  'nav',
   'quicktips',
   'pages',
   'techniques',

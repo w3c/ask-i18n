@@ -23,6 +23,23 @@ test('canonical URLs remove language suffixes and preserve index directories', (
   );
 });
 
+test('W3C navigation citations use the hosted i18n-drafts path', () => {
+  for (const sourcePath of ['nav/about.html', 'nav/about.zh-hans.html']) {
+    assert.equal(
+      canonicalUrlForSourcePath(sourcePath, 'https://www.w3.org/International/', 'what'),
+      'https://www.w3.org/International/i18n-drafts/nav/about#what'
+    );
+  }
+  assert.equal(
+    canonicalUrlForSourcePath('nav/about.html', 'https://www.w3.org/International/i18n-drafts', 'what'),
+    'https://www.w3.org/International/i18n-drafts/nav/about#what'
+  );
+  assert.equal(
+    canonicalUrlForSourcePath('nav/about.html', 'https://example.org/custom', 'what'),
+    'https://example.org/custom/nav/about#what'
+  );
+});
+
 test('translation metadata maps language states from companion translations.js', async () => {
   const file = await readFile(join(fixtureRoot.pathname, 'articles/http-charset/index-data/translations.js'), 'utf8');
   const translations = parseTranslationsFile(file);

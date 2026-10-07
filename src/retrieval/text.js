@@ -15,6 +15,11 @@ export function normalizeQuery(query = '') {
   return String(query).normalize('NFKC').trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
+export function definitionTopic(query = '') {
+  const match = normalizeQuery(query).match(/^(?:what (?:is|are)|define)\s+(.+?)[?!.]*$/);
+  return match ? match[1].replace(/\bi18n\b/g, 'internationalization') : '';
+}
+
 export function tokenize(value = '') {
   const normalized = normalizeQuery(value);
   const tokens = [];

@@ -49,6 +49,48 @@ const chunks = [
   }
 ];
 
+test('definition queries prefer the topic heading over repeated related mentions', () => {
+  const definition = {
+    ...chunks[0],
+    chunk_id: 'articles/ruby/index.en.html#definition',
+    source_path: 'articles/ruby/index.en.html',
+    title: 'Ruby annotations',
+    heading_path: ['What is ruby?'],
+    text: 'Ruby is a short annotation alongside base text to provide pronunciation or other information.'
+  };
+  const related = {
+    ...definition,
+    chunk_id: 'articles/ruby/index.en.html#examples',
+    heading_path: ['Ruby examples'],
+    text: 'Ruby examples show ruby layout, ruby alignment, ruby positioning, ruby styling, and ruby markup.'
+  };
+  const result = retrieve({ query: 'What is ruby?', chunks: [related, definition] });
+
+  assert.equal(result.results[0].chunk_id, definition.chunk_id);
+});
+
+test('a heading answering the definition question outranks a broader topic section', () => {
+  const definition = {
+    ...chunks[0],
+    chunk_id: 'nav/about.html#what',
+    source_path: 'nav/about.html',
+    title: 'About W3C Internationalization (i18n)',
+    heading_path: ['What is Internationalization?'],
+    text: 'Internationalization means designing content for users from any culture, region, or language. Unicode, text direction, names, addresses, time zones, currencies, dates, and cultural expectations need attention.'
+  };
+  const broader = {
+    ...definition,
+    chunk_id: 'questions/qa-i18n.en.html#i18n',
+    source_path: 'questions/qa-i18n.en.html',
+    title: 'Localization vs. Internationalization',
+    heading_path: ['Internationalization'],
+    text: 'Definitions of internationalization vary. Internationalization enables localization. Internationalization is often written i18n. Internationalization entails removing barriers to localization.'
+  };
+  const result = retrieve({ query: 'what is i18n', chunks: [broader, definition] });
+
+  assert.equal(result.results[0].chunk_id, definition.chunk_id);
+});
+
 test('retrieval ranks exact technical terms and excludes obsolete by default', () => {
   const result = retrieve({
     query: 'How should I declare UTF-8 character encoding?',

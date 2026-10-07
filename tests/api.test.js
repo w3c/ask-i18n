@@ -60,7 +60,7 @@ test('HTTP API serves health, retrieval, and cited answers without fetching sour
     const health = await fetch(`http://127.0.0.1:${port}/api/health`).then((response) => response.json());
     assert.equal(health.ok, true);
     assert.equal(health.is_pull_request, false);
-    assert.equal(health.indexed_documents, 4);
+    assert.equal(health.indexed_documents, 5);
 
     const markdownModule = await fetch(`http://127.0.0.1:${port}/markdown.js`);
     assert.equal(markdownModule.status, 200);
@@ -89,6 +89,14 @@ test('HTTP API serves health, retrieval, and cited answers without fetching sour
     assert.equal(answer.evidence_status, 'supported');
     assert(answer.citations.length > 0);
     assert.equal(answer.debug.retrieved_after_ranking[0].source_path, 'articles/http-charset/index.en.html');
+
+    const definition = await fetch(`http://127.0.0.1:${port}/api/ask`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ question: 'what is i18n', language: 'en' })
+    }).then((response) => response.json());
+    assert.equal(definition.citations[0]?.url, 'https://www.w3.org/International/i18n-drafts/nav/about#what');
+    assert.match(definition.answer, /design or develop/);
   } finally {
     app.close();
   }
@@ -121,7 +129,7 @@ test('UI, static assets, and API are served under a configured base path', async
 
     const health = await fetch(`${origin}/ask-i18n/api/v1/health`).then((response) => response.json());
     assert.equal(health.ok, true);
-    assert.equal(health.index.indexed_documents, 4);
+    assert.equal(health.index.indexed_documents, 5);
 
     const answer = await fetch(`${origin}/ask-i18n/api/v1/answer`, {
       method: 'POST',
@@ -185,7 +193,7 @@ test('community API exposes versioned health, search, answer, and OpenAPI contra
     const health = await healthResponse.json();
     assert.equal(healthResponse.headers.get('access-control-allow-origin'), '*');
     assert.equal(health.api_version, 'v1');
-    assert.equal(health.index.indexed_documents, 4);
+    assert.equal(health.index.indexed_documents, 5);
 
     const searchResponse = await fetch(`http://127.0.0.1:${port}/api/v1/search?q=declare%20UTF-8&language=en&status=published&limit=2`);
     const search = await searchResponse.json();
@@ -211,6 +219,14 @@ test('community API exposes versioned health, search, answer, and OpenAPI contra
     assert.equal(answer.citations[0].source_path, 'articles/http-charset/index.en.html');
     assert.equal(answer.index.source_ref, 'fixture');
     assert.equal('debug' in answer, false);
+
+    const definition = await fetch(`http://127.0.0.1:${port}/api/v1/answer`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ question: 'what is i18n', language: 'en', statuses: ['published'] })
+    }).then((response) => response.json());
+    assert.equal(definition.citations[0]?.url, 'https://www.w3.org/International/i18n-drafts/nav/about#what');
+    assert.match(definition.answer, /design or develop/);
 
     const optionsResponse = await fetch(`http://127.0.0.1:${port}/api/v1/answer`, {
       method: 'OPTIONS'

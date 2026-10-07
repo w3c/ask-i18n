@@ -18,6 +18,7 @@ Ask W3C i18n answers questions about W3C Internationalization guidance with sour
 - How should I set the language of the content in my HTML page?
 - What are character sets?
 - What is the byte-order mark?
+- What is i18n?
 - What is ruby?
 - What does the i18n WG do?
 - When HTTP Content-Type, BOM, and `<meta charset>` disagree, which encoding wins?

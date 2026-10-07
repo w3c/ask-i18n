@@ -1,6 +1,7 @@
 import { buildCitations, validateCitationsForEvidence } from './citations.js';
 import { buildPrompt } from './prompt.js';
 import { generateWithModel } from './model-client.js';
+import { definitionTopic, tokenize } from '../retrieval/text.js';
 
 const INSUFFICIENT = 'I could not find enough support for that in the indexed sources.';
 
@@ -229,6 +230,11 @@ function usefulSentences(chunk) {
 }
 
 function sentenceScore(question, sentence) {
+  const topic = definitionTopic(question);
+  if (topic) {
+    const sentenceTokens = new Set(tokenize(sentence));
+    return [...new Set(tokenize(topic))].reduce((sum, token) => sum + (sentenceTokens.has(token) ? 1 : 0), 0);
+  }
   const questionTokens = tokenizeForAnswer(question);
   const sentenceTokens = new Set(tokenizeForAnswer(sentence));
   let score = questionTokens.reduce((sum, token) => sum + (sentenceTokens.has(token) ? 1 : 0), 0);

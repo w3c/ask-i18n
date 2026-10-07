@@ -1,6 +1,11 @@
 export function canonicalUrlForSourcePath(sourcePath, publicBaseUrl, sectionId = '') {
-  const base = String(publicBaseUrl || 'https://www.w3.org/International').replace(/\/+$/, '');
+  let base = String(publicBaseUrl || 'https://www.w3.org/International').replace(/\/+$/, '');
   const normalizedPath = String(sourcePath || '').replace(/^\/+/, '');
+  // The nav pages are hosted in the repository tree, outside the published
+  // article/question URL layout used by the rest of this source.
+  if (base === 'https://www.w3.org/International' && normalizedPath.startsWith('nav/')) {
+    base += '/i18n-drafts';
+  }
   const withoutLanguage = normalizedPath.replace(/\.([a-z]{2,3}(?:-[a-z0-9]+)*)\.html$/i, '.html');
   let canonicalPath;
 
