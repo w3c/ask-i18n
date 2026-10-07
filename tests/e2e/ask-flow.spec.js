@@ -7,7 +7,7 @@ const UTF8_QUESTION = 'How should I declare UTF-8 character encoding in HTML?';
 test('ask flow renders a cited answer from the indexed sources', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.locator('#health-status')).toContainText('4 documents and 5 chunks');
+  await expect(page.locator('#health-status')).toContainText('5 documents and 9 chunks');
 
   await page.locator('#question').fill(UTF8_QUESTION);
   await page.locator('#submit-button').click();
