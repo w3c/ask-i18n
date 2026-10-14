@@ -647,3 +647,71 @@ test('HTTP API rate limiter ignores forwarded headers from untrusted peers', asy
     app.close();
   }
 });
+
+test('answer APIs reuse successful responses and isolate generation inputs and index versions', async () => {
+  const index = await buildIndex({ sourceRoot: fixtureRoot, publicBaseUrl: 'https://www.w3.org/International', sourceMode: 'local', write: false });
+  const config = fixtureConfig({ modelProvider: 'openai-compatible', modelApiKey: 'test-key', modelBaseUrl: 'https://model.test/v1', generationModel: 'model-a', rateLimitMax: 100 });
+  const app = createServer({ index, config, indexer: async () => structuredClone(index) });
+  config.adminToken = 'test-admin-token';
+  app.listen(0, '127.0.0.1');
+  await once(app, 'listening');
+  const origin = `http://127.0.0.1:${app.address().port}`;
+  const previousFetch = globalThis.fetch;
+  let calls = 0;
+  let fail = false;
+  globalThis.fetch = async (url, options) => {
+    if (String(url).startsWith(origin)) return previousFetch(url, options);
+    calls += 1;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    return fail
+      ? new Response('Unavailable', { status: 503 })
+      : Response.json({ choices: [{ message: { content: `Use UTF-8 [1]. Response ${calls}.` } }] });
+  };
+  const question = 'How should I declare UTF-8 character encoding?';
+  const ask = async (path = '/api/ask', overrides = {}) => {
+    const response = await fetch(`${origin}${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ question, language: 'en', ...overrides }) });
+    return { status: response.status, body: await response.json() };
+  };
+  try {
+    for (const path of ['/api/ask', '/api/v1/answer']) {
+      const before = calls;
+      const [first, second] = await Promise.all([ask(path), ask(path)]);
+      assert.equal(first.status, 200);
+      assert.deepEqual(second, first);
+      assert.deepEqual(await ask(path), first);
+      assert.equal(calls, before + 1, 'repeated and concurrent requests call the model once');
+    }
+    const variants = [
+      { language: 'zh-hans' },
+      { statuses: ['published'] },
+      { includeObsolete: true },
+      { question: 'How do I declare UTF-8?' }
+    ];
+    for (const variant of variants) {
+      const before = calls;
+      assert.equal((await ask('/api/ask', variant)).status, 200);
+      assert.equal(calls, before + 1);
+    }
+    let before = calls;
+    await ask('/api/v1/answer', { limit: 1 });
+    assert.equal(calls, before + 1);
+    config.generationModel = 'model-b';
+    before = calls;
+    await ask();
+    assert.equal(calls, before + 1);
+    await fetch(`${origin}/api/admin/reindex`, { method: 'POST', headers: { 'x-admin-token': config.adminToken } });
+    before = calls;
+    await ask();
+    assert.equal(calls, before + 1, 'reindex invalidates cached answers even with identical source metadata');
+    config.generationModel = 'failing-model';
+    fail = true;
+    before = calls;
+    assert.equal((await ask()).status, 502);
+    fail = false;
+    assert.equal((await ask()).status, 200);
+    assert.equal(calls, before + 2, 'provider failures are retried');
+  } finally {
+    globalThis.fetch = previousFetch;
+    app.close();
+  }
+});

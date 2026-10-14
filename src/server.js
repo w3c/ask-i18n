@@ -6,7 +6,7 @@ import { getConfig } from './config.js';
 import { mountPath } from './base-path.js';
 import { loadIndex, appendQueryLog } from './db/store.js';
 import { retrieve } from './retrieval/hybrid.js';
-import { answerFromRetrieval } from './generation/answer.js';
+import { createCachedAnswerer } from './generation/response-cache.js';
 import { runIndexer } from './indexing/indexer.js';
 import { createRateLimiter } from './rate-limit.js';
 import {
@@ -27,6 +27,7 @@ const PUBLIC_DIR = new URL('../public/', import.meta.url).pathname;
 
 export function createServer({ index = null, config = getConfig(), indexer = runIndexer } = {}) {
   const state = { index };
+  const cachedAnswer = createCachedAnswerer();
   const rateLimiter = createRateLimiter(config.rateLimitWindowMs, config.rateLimitMax, {
     trustedProxies: config.trustedProxies,
     sendLimitExceeded: (limitedRequest, limitedResponse) => {
@@ -67,7 +68,7 @@ export function createServer({ index = null, config = getConfig(), indexer = run
         }
 
         if (!rateLimiter(request, response)) return;
-        await handleApi({ request, response, url, state, config, indexer });
+        await handleApi({ request, response, url, state, config, indexer, cachedAnswer });
         return;
       }
 
@@ -85,7 +86,7 @@ export function createServer({ index = null, config = getConfig(), indexer = run
   });
 }
 
-async function handleApi({ request, response, url, state, config, indexer }) {
+async function handleApi({ request, response, url, state, config, indexer, cachedAnswer }) {
   const index = state.index;
 
   if (request.method === 'GET' && url.pathname === '/api/openapi.json') {
@@ -125,7 +126,9 @@ async function handleApi({ request, response, url, state, config, indexer }) {
       chunks: index.chunks,
       limit: answerRequest.limit
     });
-    const answer = await answerFromRetrieval({
+    const answer = await cachedAnswer({
+      index,
+      limit: answerRequest.limit,
       question: answerRequest.question,
       language: answerRequest.language,
       retrieval,
@@ -202,7 +205,9 @@ async function handleApi({ request, response, url, state, config, indexer }) {
       chunks: index.chunks,
       limit: 8
     });
-    const answer = await answerFromRetrieval({
+    const answer = await cachedAnswer({
+      index,
+      limit: 8,
       question,
       language: body.language || 'en',
       retrieval,
