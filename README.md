@@ -14,6 +14,9 @@ Ask W3C i18n answers questions about W3C Internationalization guidance with sour
 
 ## Example Questions
 
+<details>
+<summary>Show example questions</summary>
+
 - How should I declare UTF-8 character encoding in HTML?
 - How should I set the language of the content in my HTML page?
 - What are character sets?
@@ -25,6 +28,9 @@ Ask W3C i18n answers questions about W3C Internationalization guidance with sour
 - Why does my Arabic text render in the wrong order next to punctuation?
 - What's the minimum line-height setting for Arabic and Urdu?
 - users from Egypt are reporting problems with my site layout, how do I fix it?
+- How should a human-readable string be represented in WebIDL?
+
+</details>
 
 ## Run Locally
 
