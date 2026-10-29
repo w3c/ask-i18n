@@ -132,9 +132,10 @@ export function loadEnvFile(envFilePath = '.env') {
 
 export function parseEnvFileContent(content = '') {
   const parsed = {};
+  const lines = String(content).replace(/^\uFEFF/, '').split(/\r?\n/);
 
-  for (const rawLine of String(content).replace(/^\uFEFF/, '').split(/\r?\n/)) {
-    const line = rawLine.trim();
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index].trim();
     if (!line || line.startsWith('#')) continue;
 
     const assignment = line.replace(/^export\s+/, '');
@@ -144,11 +145,71 @@ export function parseEnvFileContent(content = '') {
     const key = assignment.slice(0, separatorIndex).trim();
     if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;
 
-    const rawValue = stripInlineComment(assignment.slice(separatorIndex + 1)).trim();
+    const valueSource = assignment.slice(separatorIndex + 1).trim();
+    const multiline = collectMultilineValue(valueSource, lines, index);
+    const rawValue = stripInlineComment(multiline ? multiline.value : valueSource).trim();
     parsed[key] = unquoteValue(rawValue);
+    if (multiline) index = multiline.endIndex;
   }
 
   return parsed;
+}
+
+/**
+ * Joins a quoted value that continues onto following lines, so long JSON values
+ * (for example SOURCES) can be written indented instead of on a single line.
+ * Returns null when the value fits on one line or the opening quote is never closed.
+ *
+ * @param {string} valueSource Trimmed text after the "=", including its opening quote.
+ * @param {string[]} lines All raw lines of the env file.
+ * @param {number} startIndex Index of the line the value starts on.
+ * @returns {{ value: string, endIndex: number } | null}
+ */
+function collectMultilineValue(valueSource, lines, startIndex) {
+  const quote = valueSource[0];
+  if (quote !== '"' && quote !== "'") return null;
+
+  const firstLineBody = valueSource.slice(1);
+  if (findClosingQuote(firstLineBody, quote) >= 0) return null;
+
+  const parts = [firstLineBody];
+  for (let index = startIndex + 1; index < lines.length; index += 1) {
+    const rawLine = lines[index];
+    const closingIndex = findClosingQuote(rawLine, quote);
+    if (closingIndex < 0) {
+      parts.push(rawLine);
+      continue;
+    }
+    parts.push(rawLine.slice(0, closingIndex + 1));
+    return { value: quote + parts.join('\n'), endIndex: index };
+  }
+
+  return null;
+}
+
+/**
+ * @param {string} text Text to scan, starting after the opening quote.
+ * @param {string} quote The quote character that terminates the value.
+ * @returns {number} Index of the unescaped closing quote, or -1 when absent.
+ */
+function findClosingQuote(text, quote) {
+  for (let index = 0; index < text.length; index += 1) {
+    if (text[index] !== quote) continue;
+    if (quote === '"' && isEscaped(text, index)) continue;
+    return index;
+  }
+  return -1;
+}
+
+/**
+ * @param {string} text Text containing the candidate quote.
+ * @param {number} index Index of the quote character.
+ * @returns {boolean} True when the quote is preceded by an odd number of backslashes.
+ */
+function isEscaped(text, index) {
+  let backslashes = 0;
+  for (let cursor = index - 1; cursor >= 0 && text[cursor] === '\\'; cursor -= 1) backslashes += 1;
+  return backslashes % 2 === 1;
 }
 
 function stripInlineComment(value) {

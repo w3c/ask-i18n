@@ -101,6 +101,53 @@ test('parseEnvFileContent ignores comments and supports inline comments outside 
   });
 });
 
+test('parseEnvFileContent supports multi-line single-quoted values', () => {
+  const parsed = parseEnvFileContent([
+    "SOURCES='[",
+    '  {"id":"i18n-drafts","ref":"gh-pages"}',
+    "]' # trailing comment",
+    'AFTER=next',
+    "DOUBLE=\"line one",
+    'line two"'
+  ].join('\n'));
+
+  assert.deepEqual(JSON.parse(parsed.SOURCES), [{ id: 'i18n-drafts', ref: 'gh-pages' }]);
+  assert.equal(parsed.AFTER, 'next');
+  assert.equal(parsed.DOUBLE, 'line one\nline two');
+});
+
+test('parseEnvFileContent keeps unterminated multi-line values on one line', () => {
+  const parsed = parseEnvFileContent(["SOURCES='[", '  {"id":"a"}'].join('\n'));
+
+  assert.equal(parsed.SOURCES, "'[");
+});
+
+test('getConfig reads indented multi-line SOURCES from an env file', async () => {
+  const envFilePath = await writeTempEnv([
+    'PORT=3123',
+    "SOURCES='[",
+    '  {',
+    '    "id": "i18n-drafts",',
+    '    "repoUrl": "https://github.com/w3c/i18n-drafts.git",',
+    '    "publicBaseUrl": "https://www.w3.org/International"',
+    '  },',
+    '  {',
+    '    "id": "string-meta",',
+    '    "publicBaseUrl": "https://w3c.github.io/string-meta",',
+    '    "contentFiles": ["index.html"]',
+    '  }',
+    "]'"
+  ].join('\n'));
+
+  await withCleanEnv(async () => {
+    const config = getConfig({ envFilePath });
+
+    assert.equal(config.port, 3123);
+    assert.deepEqual(config.sources.map((source) => source.id), ['i18n-drafts', 'string-meta']);
+    assert.deepEqual(config.sources[1].contentFiles, ['index.html']);
+  });
+});
+
 test('getConfig parses SOURCES JSON array and normalizes source entries', async () => {
   const sources = JSON.stringify([
     {
