@@ -24,6 +24,7 @@ Ask W3C i18n answers questions about W3C Internationalization guidance with sour
 - When HTTP Content-Type, BOM, and `<meta charset>` disagree, which encoding wins?
 - Why does my Arabic text render in the wrong order next to punctuation?
 - What's the minimum line-height setting for Arabic and Urdu?
+- users from Egypt are reporting problems with my site layout, how do I fix it?
 
 ## Run Locally
 
