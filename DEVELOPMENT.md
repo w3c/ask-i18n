@@ -40,7 +40,7 @@ The browser receives the files in `public/` directly from the Node server.
 - `src/db/store.js`: JSON index persistence and JSONL query logging.
 - `src/indexing/`: source sync, content discovery, HTML parsing,
   translation metadata parsing, canonical URL generation, chunk creation, and index writing.
-- `src/retrieval/`: query normalization, tokenization, stemming, keyword scoring, hash-bucket vector similarity, status/language/translation boosts, and result ranking.
+- `src/retrieval/`: query normalization, tokenization, stemming, query understanding (locale, script, and direction inference), BM25 field scoring, hash-bucket vector similarity, status/language/translation boosts, and result ranking.
 - `src/generation/`: prompt construction, local extractive answer generation, optional OpenAI-compatible model calls, citation construction, citation validation, and answer warnings.
 - `src/rate-limit.js`: in-memory API rate limiting keyed by direct client IP or a trusted forwarded client IP.
 - `src/evals/`: deterministic evaluation cases for retrieval and answer behavior against an existing index.
@@ -84,8 +84,12 @@ The browser side does not read `BASE_PATH`. `public/app.js` resolves API calls a
 
 Retrieval scoring combines two signals:
 
-- `keyword_score`: direct overlap between normalized query tokens and chunk text.
+- `keyword_score`: direct overlap between normalized query tokens and chunk text, computed as a BM25-style field score (title, heading, source path, text) weighted by inverse document frequency.
 - `vector_score`: each token is hashed into one of 128 fixed buckets, the bucket counts are normalized into a vector, and query/chunk vectors are compared with cosine similarity. This is a lightweight local similarity signal, not a neural embedding model. Hash collisions are possible, so it is blended with direct keyword evidence instead of used alone.
+
+### Query Understanding
+
+`src/retrieval/query-understanding.js` maps place, language, and script names in a question to a locale, then asks `Intl.Locale` for likely subtags and text direction (`Egypt` → `und-EG` → `ar-Arab-EG` → `rtl`). Right-to-left detections add `arabic`, `right-to-left`, `rtl`, and `bidi` to the search at weight 0.45, blended into the BM25 term list. Detections are reported in `debug.query_expansion` and per-result `expansion_matches`.
 
 The project does not currently use a vector database. The indexed corpus is small enough to load into memory and scan directly, and the current retrieval goals favor deterministic ranking over semantic nearest-neighbor recall. A vector database would add operational complexity, embedding generation, and model-version sensitivity without solving a current scaling problem. Revisit this choice if the corpus grows large enough that in-memory scanning becomes slow.
 
@@ -110,6 +114,8 @@ Use the fixture corpus for deterministic local development:
 npm run index -- --source-mode=local --source-repo-path=tests/fixtures/i18n-mini
 npm run eval
 ```
+
+Each case in `src/evals/cases.json` can assert the answer (`required_source_paths`, `expected_warning_types`, `expected_evidence_status`, `expected_answer_terms`) and the ranking. Ranking assertions exist because a local-mode citation only shows the one chunk the extractive answerer used, which cannot express "the right article is in the top three but not first".
 
 Run the full test suite with:
 

@@ -265,5 +265,75 @@
     "expected_evidence_status": "insufficient_evidence",
     "expected_warning_types": [],
     "notes": "App privacy docs are not indexed source content."
+  },
+  {
+    "category": "query understanding",
+    "question": "users from Egypt are reporting problems with my site layout, how do I fix it?",
+    "language": "en",
+    "min_indexed_chunks": 1000,
+    "relevant_source_paths": [
+      "articles/inline-bidi-markup/index.en.html",
+      "articles/inline-bidi-markup/bidi_examples.en.html",
+      "articles/inline-bidi-markup/uba-basics.en.html",
+      "tutorials/bidi-xhtml/index.en.html"
+    ],
+    "top_k": 3,
+    "disallowed_top_source_paths": [
+      "questions/qa-site-conneg.en.html",
+      "questions/qa-utf8-bom.en.html"
+    ],
+    "expected_evidence_status": [
+      "supported",
+      "partially_supported"
+    ],
+    "expected_warning_types": [],
+    "notes": "Symptom report from the 28 Oct 2026 breakout. The country implies an RTL script."
+  },
+  {
+    "category": "query understanding",
+    "question": "the text order is wrong when I mix Hebrew and numbers",
+    "language": "en",
+    "min_indexed_chunks": 1000,
+    "relevant_source_paths": [
+      "articles/strings-and-bidi/index.en.html",
+      "tutorials/bidi-xhtml/index.en.html",
+      "articles/inline-bidi-markup/uba-basics.en.html",
+      "articles/lang-bidi-use-cases/index.en.html"
+    ],
+    "top_k": 5,
+    "expected_evidence_status": [
+      "supported",
+      "partially_supported"
+    ],
+    "expected_warning_types": [],
+    "notes": "Paraphrased symptom with no corpus vocabulary: the language name has to imply bidirectional text."
+  },
+  {
+    "category": "query understanding",
+    "question": "网页上的阿拉伯语文字顺序不对怎么办",
+    "language": "zh-hans",
+    "min_indexed_chunks": 1000,
+    "relevant_source_paths": [
+      "questions/qa-visual-vs-logical.zh-hans.html",
+      "articles/inline-bidi-markup/index.zh-hans.html",
+      "articles/lang-bidi-use-cases/index.zh-hans.html"
+    ],
+    "top_k": 5,
+    "expected_evidence_status": [
+      "supported",
+      "partially_supported"
+    ],
+    "expected_warning_types": [],
+    "notes": "Same symptom asked in Chinese, where the corpus has translated bidi articles."
+  },
+  {
+    "category": "query understanding",
+    "question": "my users are unhappy with the site",
+    "language": "en",
+    "min_indexed_chunks": 1000,
+    "relevant_source_paths": [],
+    "expected_evidence_status": "insufficient_evidence",
+    "expected_warning_types": [],
+    "notes": "No topic, technology, or locale to anchor on: the honest answer is that support was not found."
   }
 ]

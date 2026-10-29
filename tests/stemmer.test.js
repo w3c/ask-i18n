@@ -59,3 +59,9 @@ test('tokenize does not merge Latin runs with adjacent CJK characters', () => {
   assert.deepEqual(tokens, ['如', '何', '在', 'html', '中', '设', '置', '内', '容', '的', '语', '言']);
   assert(!tokens.includes('html中设置内容的语言'));
 });
+
+test('tokenize drops first- and second-person filler words', () => {
+  assert.deepEqual(tokenize('my site'), ['site']);
+  assert.deepEqual(tokenize('our users keep asking us'), ['user', 'keep', 'ask']);
+  assert.deepEqual(tokenize('your page'), []);
+});

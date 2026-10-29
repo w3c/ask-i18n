@@ -1,6 +1,11 @@
 import { cosineSimilarity, definitionTopic, hashedVector, keywordMatchStats, normalizeQuery, tokenize } from './text.js';
+import { analyzeQuery, DIRECTION_TERM_SET } from './query-understanding.js';
 
 const DEFAULT_STATUSES = ['published', 'review', 'draft'];
+// A query token counts as specific when its IDF is close to the rarest query
+// token: matching it means the candidate covers the part of the question that
+// carries information, rather than words like "site" or "users".
+const SPECIFIC_IDF_RATIO = 0.85;
 const FIELD_WEIGHTS = {
   title: 3,
   heading: 2,
@@ -20,11 +25,20 @@ export function retrieve({
   statuses = DEFAULT_STATUSES,
   includeObsolete = false,
   chunks = [],
-  limit = 10
+  limit = 10,
+  queryExpansion = true
 }) {
   const normalizedQuery = normalizeQuery(query);
   const topic = definitionTopic(normalizedQuery);
-  const queryTokens = tokenize(topic || normalizedQuery);
+  const searchText = topic || normalizedQuery;
+  const queryTokens = tokenize(searchText);
+  // Query understanding only widens recall: expanded terms are scored at a
+  // reduced weight and never count as evidence on their own.
+  const expansion = queryExpansion === false ? { detections: [], terms: [] } : analyzeQuery(searchText);
+  const expansionTokens = expansion.terms
+    .map((term) => term.token)
+    .filter((token) => !queryTokens.includes(token));
+  const weightedTokens = mergeWeightedTokens(queryTokens, expansion.terms);
   const queryVector = hashedVector(queryTokens);
   const allowedStatuses = new Set((statuses?.length ? statuses : DEFAULT_STATUSES).map((status) => String(status).toLowerCase()));
   const requestedLanguage = String(language || 'en').toLowerCase();
@@ -32,25 +46,37 @@ export function retrieve({
   const candidates = chunks
     .filter((chunk) => statusAllowed(chunk.status, allowedStatuses, includeObsolete))
     .map(prepareCandidate);
-  const corpusStats = buildCorpusStats(candidates, queryTokens);
+  const corpusStats = buildCorpusStats(candidates, weightedTokens);
 
   const beforeRanking = candidates
     .map((candidate) => {
       const keywordStats = keywordMatchStats(queryTokens, candidate.searchable);
-      const keyword = bm25FieldScore(queryTokens, candidate.fields, corpusStats) +
+      const specific = specificMatches(keywordStats.matched_tokens, queryTokens, corpusStats);
+      // Expansion terms are matched against the already-tokenized fields:
+      // re-tokenizing every candidate would add a second full pass per query.
+      const expansionMatches = expansionTokens.filter((token) => candidate.tokenSet.has(token));
+      const keyword = bm25FieldScore(weightedTokens, candidate.fields, corpusStats) +
         titleCoverageBoost(queryTokens, candidate.fields.title) +
         sectionIntentBoost(candidate.chunk.heading_path, topic);
       // Hash-bucket vector similarity catches broader token overlap while the
-      // keyword gate below keeps weak accidental hash collisions from ranking.
+      // keyword gates below keep weak accidental hash collisions from ranking.
       const vector = cosineSimilarity(queryVector, hashedVector(candidate.allTokens));
       const relaxedCoverage = hasCjk(normalizedQuery) || isComparisonQuery(normalizedQuery);
-      const score = isMeaningfulCandidate(keywordStats, queryTokens, relaxedCoverage) ? (keyword * 0.85) + (vector * 0.15) : 0;
+      const lexicalGate = passesLexicalGate(keywordStats, queryTokens, relaxedCoverage);
+      const directionGate = passesDirectionGate(expansionTokens, expansionMatches);
+      const score = (lexicalGate || directionGate) ? (keyword * 0.85) + (vector * 0.15) : 0;
 
       return {
         ...publicChunk(candidate.chunk),
         keyword_score: round(keyword),
         vector_score: round(vector),
         matched_tokens: keywordStats.matched_tokens,
+        specific_matches: specific,
+        expansion_matches: expansionMatches,
+        // True when the chunk was admitted only because query understanding
+        // inferred what the question is about: it matches none of the
+        // informative terms the user typed.
+        expansion_only: !lexicalGate && specific.length === 0,
         base_score: round(score),
         score: round(score)
       };
@@ -87,6 +113,10 @@ export function retrieve({
         statuses: [...allowedStatuses],
         includeObsolete
       },
+      query_expansion: {
+        detections: expansion.detections,
+        terms: expansion.terms
+      },
       retrieved_before_ranking: beforeRanking,
       retrieved_after_ranking: finalResults
     }
@@ -102,10 +132,13 @@ function prepareCandidate(chunk) {
     text: tokenize(chunk.text)
   };
 
+  const allTokens = Object.values(fields).flat();
+
   return {
     chunk,
     fields,
-    allTokens: Object.values(fields).flat(),
+    allTokens,
+    tokenSet: new Set(allTokens),
     searchable: [
       chunk.title,
       chunk.heading_path?.join(' '),
@@ -115,33 +148,45 @@ function prepareCandidate(chunk) {
   };
 }
 
-function buildCorpusStats(candidates, queryTokens) {
+function buildCorpusStats(candidates, weightedTokens) {
   const averageLengths = Object.fromEntries(Object.keys(FIELD_WEIGHTS).map((field) => {
     const total = candidates.reduce((sum, candidate) => sum + candidate.fields[field].length, 0);
     return [field, candidates.length > 0 ? total / candidates.length : 1];
   }));
   const documentFrequencies = new Map();
 
-  for (const token of new Set(queryTokens)) {
+  for (const token of new Set(weightedTokens.map((term) => term.token))) {
     const frequency = candidates.reduce((count, candidate) => {
       return count + (candidate.allTokens.includes(token) ? 1 : 0);
     }, 0);
     documentFrequencies.set(token, frequency);
   }
 
+  const idf = new Map();
+  for (const [token, frequency] of documentFrequencies) {
+    idf.set(token, inverseDocumentFrequency(frequency, candidates.length));
+  }
+
   return {
     averageLengths,
     documentFrequencies,
-    documentCount: candidates.length
+    documentCount: candidates.length,
+    idf
   };
 }
 
-function bm25FieldScore(queryTokens, fields, corpusStats) {
-  const uniqueQueryTokens = [...new Set(queryTokens)];
-  if (uniqueQueryTokens.length === 0 || corpusStats.documentCount === 0) return 0;
+function inverseDocumentFrequency(documentFrequency, documentCount) {
+  return Math.log(1 + ((documentCount - documentFrequency + 0.5) / (documentFrequency + 0.5)));
+}
+
+function bm25FieldScore(weightedTokens, fields, corpusStats) {
+  if (weightedTokens.length === 0 || corpusStats.documentCount === 0) return 0;
 
   let score = 0;
-  for (const token of uniqueQueryTokens) {
+  let totalWeight = 0;
+
+  for (const { token, weight } of weightedTokens) {
+    totalWeight += weight;
     let weightedTermFrequency = 0;
 
     for (const field of Object.keys(FIELD_WEIGHTS)) {
@@ -155,13 +200,22 @@ function bm25FieldScore(queryTokens, fields, corpusStats) {
     }
 
     if (weightedTermFrequency === 0) continue;
-    const documentFrequency = corpusStats.documentFrequencies.get(token) || 0;
-    const inverseDocumentFrequency = Math.log(1 + ((corpusStats.documentCount - documentFrequency + 0.5) / (documentFrequency + 0.5)));
     const saturation = (weightedTermFrequency * 2.2) / (weightedTermFrequency + 1.2);
-    score += inverseDocumentFrequency * saturation;
+    score += weight * (corpusStats.idf.get(token) || 0) * saturation;
   }
 
-  return score / uniqueQueryTokens.length;
+  return totalWeight === 0 ? 0 : score / totalWeight;
+}
+
+// Merge typed and inferred tokens into one weighted term list. A token the
+// user actually typed keeps its full weight even if expansion produced it too.
+function mergeWeightedTokens(queryTokens, expansionTerms) {
+  const merged = new Map();
+  for (const token of queryTokens) merged.set(token, 1);
+  for (const { token, weight } of expansionTerms) {
+    if (!merged.has(token)) merged.set(token, weight);
+  }
+  return [...merged].map(([token, weight]) => ({ token, weight }));
 }
 
 function countToken(tokens, expected) {
@@ -195,7 +249,25 @@ function sectionIntentBoost(headingPath = [], topic = '') {
   return 0;
 }
 
-function isMeaningfulCandidate(keywordStats, queryTokens, relaxedCoverage = false) {
+// Tokens whose IDF is close to the rarest query token the corpus actually
+// contains: the part of the question that narrows the search, as opposed to
+// filler like "my" or "trouble". This is not a gate; it travels with the
+// result so the answer path can tell direct evidence from inferred evidence.
+// Tokens missing from the corpus are ignored, because a word the corpus never
+// uses cannot make the rest of the query look unimportant.
+function specificMatches(matchedTokens, queryTokens, corpusStats) {
+  let maximum = 0;
+  for (const token of new Set(queryTokens)) {
+    if ((corpusStats.documentFrequencies.get(token) || 0) === 0) continue;
+    maximum = Math.max(maximum, corpusStats.idf.get(token) || 0);
+  }
+  if (maximum <= 0) return [];
+
+  const threshold = maximum * SPECIFIC_IDF_RATIO;
+  return matchedTokens.filter((token) => (corpusStats.idf.get(token) || 0) >= threshold);
+}
+
+function passesLexicalGate(keywordStats, queryTokens, relaxedCoverage = false) {
   const uniqueQueryCount = new Set(queryTokens).size;
   if (uniqueQueryCount === 0) return false;
   if (relaxedCoverage && keywordStats.technical_matches > 0) return true;
@@ -204,6 +276,15 @@ function isMeaningfulCandidate(keywordStats, queryTokens, relaxedCoverage = fals
   const requiredMatches = Math.min(3, uniqueQueryCount);
   if (keywordStats.unique_matches < requiredMatches) return false;
   return keywordStats.technical_matches > 0 || keywordStats.unique_matches >= 2;
+}
+
+// Query understanding admits chunks that never repeat the user's own words but
+// do talk about the concept the query implies (an Arabic-speaking audience
+// implies bidirectional layout guidance). Deliberately narrow: it only opens on
+// a direction term, never on a language name alone.
+function passesDirectionGate(expansionTokens, expansionMatches) {
+  if (expansionTokens.length === 0) return false;
+  return expansionMatches.some((token) => DIRECTION_TERM_SET.has(token));
 }
 
 function hasCjk(value) {
@@ -274,8 +355,8 @@ function addTranslationCounterparts(afterRanking, allChunks, requestedLanguage, 
   const groups = new Map();
   for (const result of englishResults) {
     const gid = result.translation_group_id;
-    if (gid && (!groups.has(gid) || result.score > groups.get(gid))) {
-      groups.set(gid, result.score);
+    if (gid && (!groups.has(gid) || result.score > groups.get(gid).score)) {
+      groups.set(gid, result);
     }
   }
 
@@ -300,13 +381,19 @@ function addTranslationCounterparts(afterRanking, allChunks, requestedLanguage, 
     if (used >= groupCap) continue;
     groupCounts.set(gid, used + 1);
 
+    // The translated chunk ranks on its English counterpart's evidence, so it
+    // inherits that chunk's lexical diagnostics rather than claiming its own.
+    const source = groups.get(gid);
     translated.push({
       ...publicChunk(chunk),
       keyword_score: 0,
       vector_score: 0,
       matched_tokens: [],
-      base_score: round(groups.get(gid) - 0.01),
-      score: round(groups.get(gid) - 0.01 + languageBoost(chunk, requestedLanguage) + statusBoost(chunk.status) + translationBoost(chunk))
+      specific_matches: source.specific_matches || [],
+      expansion_matches: source.expansion_matches || [],
+      expansion_only: Boolean(source.expansion_only),
+      base_score: round(source.score - 0.01),
+      score: round(source.score - 0.01 + languageBoost(chunk, requestedLanguage) + statusBoost(chunk.status) + translationBoost(chunk))
     });
   }
 

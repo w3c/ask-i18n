@@ -70,11 +70,24 @@ export async function answerFromRetrieval({
     answer,
     citations,
     warnings,
-    evidence_status: conflictQuestion ? 'partially_supported' : (topScore >= 0.18 ? 'supported' : 'partially_supported'),
+    evidence_status: conflictQuestion ? 'partially_supported' : evidenceStatus(results, topScore),
     debug: enableDebug ? debugPayload({ question, retrieval, selectedChunks, answer, warnings, prompt, citations }) : null
   });
 
   return response;
+}
+
+// A high lexical score on its own says nothing about whether the chunk answers
+// the question: a passage that repeats "site", "users", and "problem" scores
+// well while ignoring the place or technology the question is about. So
+// "supported" also requires the top-ranked chunk to match one of the query's
+// specific terms, not only the ones query understanding inferred. Results
+// without this diagnostic (hand-built fixtures) keep the score-only behaviour.
+function evidenceStatus(results, topScore) {
+  const evidence = results[0];
+  if (topScore < 0.18) return 'partially_supported';
+  if (!Array.isArray(evidence?.specific_matches)) return 'supported';
+  return evidence.specific_matches.length > 0 ? 'supported' : 'partially_supported';
 }
 
 export function buildWarnings(citations, selectedLanguage) {

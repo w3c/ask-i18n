@@ -89,6 +89,18 @@ const STOPWORDS = new Set([
   'where',
   'which',
   'with',
+  // First- and second-person fillers. They are rare in W3C guidance prose but
+  // frequent in symptom reports ("my site", "our users"), so keeping them
+  // would make small talk look like a rare, specific term.
+  'my',
+  'mine',
+  'our',
+  'ours',
+  'us',
+  'we',
+  'you',
+  'your',
+  'yours',
   'about',
   'content',
   'draft',
@@ -111,8 +123,15 @@ export function keywordScore(queryTokens, text) {
 }
 
 export function keywordMatchStats(queryTokens, text) {
+  // Check the query first: callers pass an empty token list for queries that
+  // produced no expansion terms, and tokenizing every candidate for nothing
+  // doubles retrieval cost.
+  if (queryTokens.length === 0) {
+    return { score: 0, unique_matches: 0, technical_matches: 0, matched_tokens: [] };
+  }
+
   const textTokens = tokenize(text);
-  if (queryTokens.length === 0 || textTokens.length === 0) {
+  if (textTokens.length === 0) {
     return { score: 0, unique_matches: 0, technical_matches: 0, matched_tokens: [] };
   }
 
