@@ -23,6 +23,7 @@ Ask W3C i18n answers questions about W3C Internationalization guidance with sour
 - What does the i18n WG do?
 - When HTTP Content-Type, BOM, and `<meta charset>` disagree, which encoding wins?
 - Why does my Arabic text render in the wrong order next to punctuation?
+- What's the minimum line-height setting for Arabic and Urdu?
 
 ## Run Locally
 
