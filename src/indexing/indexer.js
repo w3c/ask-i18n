@@ -21,6 +21,7 @@ export async function buildIndex({
   requireMetadata = true,
   defaultStatus = '',
   statusOverride = '',
+  githubPagesBaseUrl = '',
   write = true,
   indexPath = '.data/index.json'
 }) {
@@ -45,7 +46,8 @@ export async function buildIndex({
         sourceRef,
         sourceCommit,
         defaultStatus,
-        statusOverride
+        statusOverride,
+        githubPagesBaseUrl
       });
       if (sourceId) document.source_id = sourceId;
       const documentChunks = chunkHtmlPage(document, { publicBaseUrl });
@@ -139,6 +141,7 @@ export async function buildMultiSourceIndex(config) {
       requireMetadata: source.requireMetadata,
       defaultStatus: source.defaultStatus,
       statusOverride: source.statusOverride,
+      githubPagesBaseUrl: source.githubPagesBaseUrl,
       write: false
     });
 
@@ -226,6 +229,7 @@ export async function runIndexer(config = getConfig()) {
       requireMetadata: source.requireMetadata,
       defaultStatus: source.defaultStatus,
       statusOverride: source.statusOverride,
+      githubPagesBaseUrl: source.githubPagesBaseUrl,
       write: true,
       indexPath: config.indexPath
     });
@@ -241,6 +245,7 @@ export async function runIndexer(config = getConfig()) {
     sourceMode: config.sourceMode,
     sourceRef: config.sourceRef,
     sourceCommit: sourceCommit || config.sourceCommit,
+    githubPagesBaseUrl: config.sources?.[0]?.githubPagesBaseUrl,
     write: true,
     indexPath: config.indexPath
   });

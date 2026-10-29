@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { canonicalUrlForSourcePath } from '../src/indexing/canonical-url.js';
+import { canonicalUrlForSourcePath, citationUrlForSourcePath } from '../src/indexing/canonical-url.js';
 import { parseTranslationsFile, translationStateForLanguage } from '../src/indexing/parse-translations.js';
 import { parseHtmlPage, isLikelyContentPage } from '../src/indexing/parse-html.js';
 
@@ -20,6 +20,56 @@ test('canonical URLs remove language suffixes and preserve index directories', (
   assert.equal(
     canonicalUrlForSourcePath('articles/http-charset/index.en.html', 'https://www.w3.org/International', 'charset'),
     'https://www.w3.org/International/articles/http-charset/#charset'
+  );
+});
+
+test('draft and review citations use the GitHub Pages source URL', () => {
+  const githubPagesBaseUrl = 'https://w3c.github.io/i18n-drafts';
+
+  assert.equal(
+    citationUrlForSourcePath({
+      sourcePath: 'questions/qa-bidi-localization.en.html',
+      publicBaseUrl: 'https://www.w3.org/International',
+      githubPagesBaseUrl,
+      status: 'draft'
+    }),
+    'https://w3c.github.io/i18n-drafts/questions/qa-bidi-localization.en.html'
+  );
+  assert.equal(
+    citationUrlForSourcePath({
+      sourcePath: 'questions/qa-bidi-localization.en.html',
+      publicBaseUrl: 'https://www.w3.org/International',
+      githubPagesBaseUrl,
+      status: 'review',
+      sectionId: 'answer'
+    }),
+    'https://w3c.github.io/i18n-drafts/questions/qa-bidi-localization.en.html#answer'
+  );
+});
+
+test('published and obsolete citations keep the w3.org canonical URL', () => {
+  for (const status of ['published', 'obsolete', 'notreviewed']) {
+    assert.equal(
+      citationUrlForSourcePath({
+        sourcePath: 'articles/http-charset/index.en.html',
+        publicBaseUrl: 'https://www.w3.org/International',
+        githubPagesBaseUrl: 'https://w3c.github.io/i18n-drafts',
+        status,
+        sectionId: 'charset'
+      }),
+      'https://www.w3.org/International/articles/http-charset/#charset'
+    );
+  }
+});
+
+test('draft citations fall back to the w3.org URL without a GitHub Pages base', () => {
+  assert.equal(
+    citationUrlForSourcePath({
+      sourcePath: 'questions/qa-bidi-localization.en.html',
+      publicBaseUrl: 'https://www.w3.org/International',
+      status: 'draft'
+    }),
+    'https://www.w3.org/International/questions/qa-bidi-localization'
   );
 });
 
@@ -112,6 +162,29 @@ test('parseHtmlPage lets a source status override take precedence over page meta
   });
 
   assert.equal(parsed.status, 'published');
+});
+
+test('parseHtmlPage cites draft pages through their GitHub Pages source file', () => {
+  const html = '<html lang="en"><head><title>Draft</title></head><body><h1>Draft</h1><script>var f = { status: "draft" };</script></body></html>';
+  const githubPagesBaseUrl = 'https://w3c.github.io/i18n-drafts';
+  const draft = parseHtmlPage({
+    html,
+    sourcePath: 'questions/qa-bidi-localization.en.html',
+    publicBaseUrl: 'https://www.w3.org/International',
+    githubPagesBaseUrl
+  });
+  const published = parseHtmlPage({
+    html: html.replace('"draft"', '"published"'),
+    sourcePath: 'questions/qa-bidi-localization.en.html',
+    publicBaseUrl: 'https://www.w3.org/International',
+    githubPagesBaseUrl
+  });
+
+  assert.equal(draft.status, 'draft');
+  assert.equal(draft.canonical_url, 'https://w3c.github.io/i18n-drafts/questions/qa-bidi-localization.en.html');
+  assert.equal(draft.github_pages_url, 'https://w3c.github.io/i18n-drafts/questions/qa-bidi-localization.en.html');
+  assert.equal(published.canonical_url, 'https://www.w3.org/International/questions/qa-bidi-localization');
+  assert.equal(published.github_pages_url, 'https://w3c.github.io/i18n-drafts/questions/qa-bidi-localization.en.html');
 });
 
 test('isLikelyContentPage accepts pages without h1 when they have h2 or title and requireMetadata is false', () => {

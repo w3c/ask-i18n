@@ -196,6 +196,8 @@ Answer responses have this shape:
 }
 ```
 
+Citations for `draft` and `review` pages point at the GitHub Pages copy of the source file (`https://w3c.github.io/i18n-drafts/<source path>`) instead of the w3.org layout, because those pages are not published on w3.org yet. The GitHub Pages base URL is derived from each source's `repoUrl` and can be overridden per source with `githubPagesBaseUrl` in `SOURCES`.
+
 Supported filters:
 
 - `language`: preferred BCP 47 language tag, default `en`.

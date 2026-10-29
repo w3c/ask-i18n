@@ -135,6 +135,26 @@ test('getConfig parses SOURCES JSON array and normalizes source entries', async 
     assert.equal(config.sources[1].requireMetadata, false);
     assert.equal(config.sources[0].defaultStatus, '');
     assert.equal(config.sources[1].defaultStatus, 'published');
+    assert.equal(config.sources[0].githubPagesBaseUrl, 'https://w3c.github.io/i18n-drafts');
+    assert.equal(config.sources[1].githubPagesBaseUrl, 'https://w3c.github.io/bp-i18n-specdev');
+  });
+});
+
+test('getConfig lets a source override its GitHub Pages base URL', async () => {
+  const sources = JSON.stringify([
+    {
+      id: 'fork',
+      repoUrl: 'git@github.com:example/i18n-drafts.git',
+      publicBaseUrl: 'https://www.w3.org/International',
+      github_pages_base_url: 'https://example.github.io/preview'
+    }
+  ]);
+  const envFilePath = await writeTempEnv(`SOURCES=${sources}`);
+
+  await withCleanEnv(async () => {
+    const config = getConfig({ envFilePath });
+
+    assert.equal(config.sources[0].githubPagesBaseUrl, 'https://example.github.io/preview');
   });
 });
 
@@ -167,6 +187,7 @@ test('getConfig falls back to legacy single-source when SOURCES is not set', asy
     assert.equal(config.sources[0].mode, 'git');
     assert.equal(config.sources[0].ref, 'main');
     assert.equal(config.sources[0].requireMetadata, true);
+    assert.equal(config.sources[0].githubPagesBaseUrl, 'https://w3c.github.io/i18n-drafts');
   });
 });
 

@@ -1,3 +1,8 @@
+// The W3C site only carries pages that have been published there. Draft and
+// review pages exist only in the source repository, so their citations have to
+// point at the GitHub Pages preview instead of the w3.org layout.
+const GITHUB_PAGES_STATUSES = new Set(['draft', 'review']);
+
 export function canonicalUrlForSourcePath(sourcePath, publicBaseUrl, sectionId = '') {
   let base = String(publicBaseUrl || 'https://www.w3.org/International').replace(/\/+$/, '');
   const normalizedPath = String(sourcePath || '').replace(/^\/+/, '');
@@ -15,7 +20,33 @@ export function canonicalUrlForSourcePath(sourcePath, publicBaseUrl, sectionId =
     canonicalPath = withoutLanguage.replace(/\.html$/i, '');
   }
 
-  const url = `${base}/${canonicalPath}`;
+  return withSectionId(`${base}/${canonicalPath}`, sectionId);
+}
+
+export function githubPagesUrlForSourcePath(sourcePath, githubPagesBaseUrl) {
+  const base = String(githubPagesBaseUrl || '').replace(/\/+$/, '');
+  const normalizedPath = String(sourcePath || '').replace(/^\/+/, '');
+  if (!base || !normalizedPath) return '';
+  // GitHub Pages serves the file as it is checked in, including the language
+  // suffix, and does no language negotiation.
+  return `${base}/${normalizedPath}`;
+}
+
+export function citationUrlForSourcePath({
+  sourcePath,
+  publicBaseUrl,
+  githubPagesBaseUrl = '',
+  status = '',
+  sectionId = ''
+}) {
+  const githubPagesUrl = GITHUB_PAGES_STATUSES.has(String(status || '').trim().toLowerCase())
+    ? githubPagesUrlForSourcePath(sourcePath, githubPagesBaseUrl)
+    : '';
+  const url = githubPagesUrl || canonicalUrlForSourcePath(sourcePath, publicBaseUrl);
+  return withSectionId(url, sectionId);
+}
+
+export function withSectionId(url, sectionId) {
   return sectionId ? `${url}#${encodeURIComponent(sectionId)}` : url;
 }
 

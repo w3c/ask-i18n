@@ -1,6 +1,10 @@
 import vm from 'node:vm';
 import { createHash } from 'node:crypto';
-import { canonicalUrlForSourcePath, sourcePathWithoutLanguage } from './canonical-url.js';
+import {
+  citationUrlForSourcePath,
+  githubPagesUrlForSourcePath,
+  sourcePathWithoutLanguage
+} from './canonical-url.js';
 import { normalizeLanguage, translationStateForLanguage, EMPTY_TRANSLATIONS } from './parse-translations.js';
 
 export function parseHtmlPage({
@@ -12,7 +16,8 @@ export function parseHtmlPage({
   sourceRef = '',
   sourceCommit = '',
   defaultStatus = '',
-  statusOverride = ''
+  statusOverride = '',
+  githubPagesBaseUrl = ''
 }) {
   const f = extractFMetadata(html);
   const htmlLang = normalizeLanguage(firstMatch(html, /<html\b[^>]*\blang=["']?([^"'\s>]+)/i));
@@ -29,7 +34,8 @@ export function parseHtmlPage({
   const status = statusOverride
     ? normalizeStatus(statusOverride)
     : (f.status ? normalizeStatus(f.status) : (defaultStatus || normalizeStatus(f.status)));
-  const canonicalUrl = canonicalUrlForSourcePath(sourcePath, publicBaseUrl);
+  const canonicalUrl = citationUrlForSourcePath({ sourcePath, publicBaseUrl, githubPagesBaseUrl, status });
+  const githubPagesUrl = githubPagesUrlForSourcePath(sourcePath, githubPagesBaseUrl);
   const text = htmlToCleanText(html);
   const indexedAt = new Date().toISOString();
 
@@ -40,7 +46,7 @@ export function parseHtmlPage({
     source_commit: sourceCommit,
     source_path: sourcePath,
     canonical_url: canonicalUrl,
-    github_pages_url: canonicalUrl,
+    github_pages_url: githubPagesUrl || canonicalUrl,
     root: sourcePath.split('/')[0] || '',
     language,
     html_lang: htmlLang,

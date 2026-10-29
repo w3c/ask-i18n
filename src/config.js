@@ -64,16 +64,19 @@ function parseSources(overrides, env) {
     ? parseBoolean(overrides.requireMetadata)
     : true;
 
+  const repoUrl = firstDefined(overrides.sourceRepoUrl, env.SOURCE_REPO_URL, 'https://github.com/w3c/i18n-drafts.git');
+
   return [
     {
       id: 'i18n-drafts',
       mode: firstDefined(overrides.sourceMode, env.SOURCE_MODE, 'git'),
-      repoUrl: firstDefined(overrides.sourceRepoUrl, env.SOURCE_REPO_URL, 'https://github.com/w3c/i18n-drafts.git'),
+      repoUrl,
       ref: firstDefined(overrides.sourceRef, env.SOURCE_REF, 'gh-pages'),
       cacheDir: firstDefined(overrides.sourceCacheDir, env.SOURCE_CACHE_DIR, '.cache/source/i18n-drafts'),
       fetchDepth: Number(firstDefined(overrides.sourceFetchDepth, env.SOURCE_FETCH_DEPTH, 1)),
       repoPath: firstDefined(overrides.sourceRepoPath, env.SOURCE_REPO_PATH, ''),
       publicBaseUrl: firstDefined(overrides.publicBaseUrl, env.PUBLIC_BASE_URL, 'https://www.w3.org/International'),
+      githubPagesBaseUrl: firstDefined(overrides.githubPagesBaseUrl, deriveGithubPagesBaseUrl(repoUrl)),
       contentRoots: null,
       requireMetadata,
       defaultStatus: overrides.defaultStatus || (requireMetadata ? '' : 'published'),
@@ -93,6 +96,8 @@ function normalizeSource(source, index) {
     fetchDepth: Number(source.fetchDepth ?? source.fetch_depth ?? 1),
     repoPath: source.repoPath || source.repo_path || '',
     publicBaseUrl: source.publicBaseUrl || source.public_base_url || source.baseUrl || '',
+    githubPagesBaseUrl: source.githubPagesBaseUrl || source.github_pages_base_url ||
+      deriveGithubPagesBaseUrl(source.repoUrl || source.repo_url || ''),
     contentRoots: Array.isArray(source.contentRoots || source.content_roots)
       ? (source.contentRoots || source.content_roots)
       : null,
@@ -100,6 +105,14 @@ function normalizeSource(source, index) {
     defaultStatus: source.defaultStatus || source.default_status || (requireMetadata ? '' : 'published'),
     statusOverride: source.statusOverride || source.status_override || ''
   };
+}
+
+// GitHub Pages serves the repository at <owner>.github.io/<repo>. Draft and
+// review pages are not published on w3.org, so their citations need this base.
+export function deriveGithubPagesBaseUrl(repoUrl = '') {
+  const match = String(repoUrl).match(/github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?\/?$/i);
+  if (!match) return '';
+  return `https://${match[1].toLowerCase()}.github.io/${match[2]}`;
 }
 
 export function loadEnvFile(envFilePath = '.env') {

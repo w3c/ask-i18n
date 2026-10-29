@@ -1,8 +1,12 @@
-import { canonicalUrlForSourcePath } from './canonical-url.js';
+import { canonicalUrlForSourcePath, withSectionId } from './canonical-url.js';
 import { cleanText, firstMatch, htmlToCleanText, sha256 } from './parse-html.js';
 
 export function chunkHtmlPage(page, options = {}) {
   const publicBaseUrl = options.publicBaseUrl || page.public_base_url || 'https://www.w3.org/International';
+  // The document URL already accounts for provisional sources that only exist
+  // on GitHub Pages, so section citations build on it instead of recomputing
+  // the published layout from the source path.
+  const documentUrl = page.canonical_url || canonicalUrlForSourcePath(page.source_path, publicBaseUrl);
   const html = removeNonContent(page.html || '');
   const sections = extractSectionChunks(html);
   const indexedAt = new Date().toISOString();
@@ -21,7 +25,7 @@ export function chunkHtmlPage(page, options = {}) {
         source_path: page.source_path,
         canonical_url: page.canonical_url,
         section_id: sectionId,
-        section_url: canonicalUrlForSourcePath(page.source_path, publicBaseUrl, sectionId),
+        section_url: withSectionId(documentUrl, sectionId),
         language: page.language,
         status: page.status,
         translation_state: page.translation_state,

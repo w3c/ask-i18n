@@ -196,6 +196,8 @@ Answer响应的结构如下：
 }
 ```
 
+`draft`和`review`状态的页面尚未发布到w3.org，因此引用链接指向GitHub Pages上的源文件（`https://w3c.github.io/i18n-drafts/<source path>`），而不是w3.org的页面布局。GitHub Pages的基础URL由各source的`repoUrl`推导，也可在`SOURCES`中用`githubPagesBaseUrl`为单个source覆盖。
+
 支持的过滤参数：
 
 - `language`：首选BCP 47语言标签，默认为`en`。

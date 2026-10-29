@@ -102,6 +102,28 @@ test('indexer builds documents and chunks with source metadata', async () => {
   assert.equal(index.summary.skipped, 1);
 });
 
+test('indexer cites review documents through GitHub Pages and published ones through w3.org', async () => {
+  const index = await buildIndex({
+    sourceRoot: fixtureRoot,
+    publicBaseUrl: 'https://www.w3.org/International',
+    githubPagesBaseUrl: 'https://w3c.github.io/i18n-drafts',
+    sourceMode: 'local',
+    sourceRef: 'fixture',
+    sourceCommit: 'fixture-sha',
+    write: false
+  });
+
+  const reviewDocument = index.documents.find((document) => document.source_path === 'questions/qa-link-lang.en.html');
+  assert.equal(reviewDocument.status, 'review');
+  assert.equal(reviewDocument.canonical_url, 'https://w3c.github.io/i18n-drafts/questions/qa-link-lang.en.html');
+
+  const reviewChunk = index.chunks.find((chunk) => chunk.chunk_id === 'questions/qa-link-lang.en.html#link-language');
+  assert.equal(reviewChunk.section_url, 'https://w3c.github.io/i18n-drafts/questions/qa-link-lang.en.html#link-language');
+
+  const publishedChunk = index.chunks.find((chunk) => chunk.chunk_id === 'articles/http-charset/index.en.html#charset');
+  assert.equal(publishedChunk.section_url, 'https://www.w3.org/International/articles/http-charset/#charset');
+});
+
 test('discovery with custom contentRoots and requireMetadata finds specdev pages', async () => {
   const files = await discoverContentFiles(specdevRoot, { contentRoots: [''], requireMetadata: false });
 
