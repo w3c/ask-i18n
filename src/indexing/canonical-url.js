@@ -14,7 +14,10 @@ export function canonicalUrlForSourcePath(sourcePath, publicBaseUrl, sectionId =
   const withoutLanguage = normalizedPath.replace(/\.([a-z]{2,3}(?:-[a-z0-9]+)*)\.html$/i, '.html');
   let canonicalPath;
 
-  if (/\/index\.html$/i.test(withoutLanguage)) {
+  if (/^index\.html$/i.test(withoutLanguage)) {
+    // A root index.html is the source's landing page, not a child named "index".
+    canonicalPath = '';
+  } else if (/\/index\.html$/i.test(withoutLanguage)) {
     canonicalPath = withoutLanguage.replace(/index\.html$/i, '');
   } else {
     canonicalPath = withoutLanguage.replace(/\.html$/i, '');

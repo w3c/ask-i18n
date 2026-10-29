@@ -25,7 +25,15 @@ export async function discoverContentFilesDetailed(sourceRoot, options = {}) {
   const contentRoots = options.contentRoots != null
     ? new Set(options.contentRoots)
     : CONTENT_ROOTS;
+  const contentFiles = Array.isArray(options.contentFiles)
+    ? options.contentFiles.filter(Boolean)
+    : [];
   const requireMetadata = options.requireMetadata !== false;
+
+  if (contentFiles.length > 0) {
+    return discoverListedContentFiles(sourceRoot, { contentFiles, requireMetadata });
+  }
+
   const files = [];
   let skipped = 0;
 
@@ -50,8 +58,8 @@ export async function discoverContentFilesDetailed(sourceRoot, options = {}) {
         continue;
       }
 
-      const html = await readFile(absolutePath, 'utf8');
-      if (isLikelyContentPage(html, { requireMetadata })) {
+      const isContent = await isContentPageFile(absolutePath, requireMetadata);
+      if (isContent) {
         files.push(relativePath);
       } else {
         skipped += 1;
@@ -67,6 +75,48 @@ export async function discoverContentFilesDetailed(sourceRoot, options = {}) {
 function matchesContentRoots(segments, contentRoots) {
   if (contentRoots.has('')) return true;
   return contentRoots.has(segments[0]);
+}
+
+// contentFiles names exact pages for sources whose useful content is a single
+// root-level document, such as string-meta's index.html.
+async function discoverListedContentFiles(sourceRoot, { contentFiles, requireMetadata }) {
+  const files = new Set();
+  let skipped = 0;
+
+  for (const rawPath of contentFiles) {
+    const relativePath = normalizeContentFilePath(rawPath);
+    let isContent;
+
+    try {
+      isContent = await isContentPageFile(join(sourceRoot, relativePath), requireMetadata);
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        throw new Error(`Content file not found in source: ${relativePath}`);
+      }
+      throw error;
+    }
+
+    if (isContent) {
+      files.add(relativePath);
+    } else {
+      skipped += 1;
+    }
+  }
+
+  return { files: [...files].sort((a, b) => a.localeCompare(b)), skipped };
+}
+
+async function isContentPageFile(absolutePath, requireMetadata) {
+  const html = await readFile(absolutePath, 'utf8');
+  return isLikelyContentPage(html, { requireMetadata });
+}
+
+function normalizeContentFilePath(file) {
+  const normalized = normalizePath(file).replace(/^\.\//, '');
+  if (!normalized || normalized.startsWith('/') || normalized.split('/').includes('..')) {
+    throw new Error(`Invalid content file path: ${file}`);
+  }
+  return normalized;
 }
 
 export function normalizePath(path) {

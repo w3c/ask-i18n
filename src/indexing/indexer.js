@@ -18,6 +18,7 @@ export async function buildIndex({
   sourceCommit = '',
   sourceId = '',
   contentRoots = null,
+  contentFiles = null,
   requireMetadata = true,
   defaultStatus = '',
   statusOverride = '',
@@ -26,7 +27,7 @@ export async function buildIndex({
   indexPath = '.data/index.json'
 }) {
   const root = resolve(sourceRoot);
-  const discovered = await discoverContentFilesDetailed(root, { contentRoots, requireMetadata });
+  const discovered = await discoverContentFilesDetailed(root, { contentRoots, contentFiles, requireMetadata });
   const documents = [];
   const chunks = [];
   const warnings = [];
@@ -138,6 +139,7 @@ export async function buildMultiSourceIndex(config) {
       sourceCommit: source.sourceCommit,
       sourceId: source.id,
       contentRoots: source.contentRoots,
+      contentFiles: source.contentFiles,
       requireMetadata: source.requireMetadata,
       defaultStatus: source.defaultStatus,
       statusOverride: source.statusOverride,
@@ -226,6 +228,7 @@ export async function runIndexer(config = getConfig()) {
       sourceCommit: sourceCommit || config.sourceCommit,
       sourceId: source.id,
       contentRoots: source.contentRoots,
+      contentFiles: source.contentFiles,
       requireMetadata: source.requireMetadata,
       defaultStatus: source.defaultStatus,
       statusOverride: source.statusOverride,

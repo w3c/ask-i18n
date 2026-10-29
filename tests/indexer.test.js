@@ -8,6 +8,7 @@ import { buildIndex } from '../src/indexing/indexer.js';
 const fixtureRoot = new URL('./fixtures/i18n-mini/', import.meta.url).pathname;
 const specdevRoot = new URL('./fixtures/specdev-mini/', import.meta.url).pathname;
 const activityRoot = new URL('./fixtures/i18n-activity-mini/', import.meta.url).pathname;
+const stringMetaRoot = new URL('./fixtures/string-meta-mini/', import.meta.url).pathname;
 
 test('content discovery indexes primary content roots and skips support data HTML', async () => {
   const files = await discoverContentFiles(fixtureRoot);
@@ -81,6 +82,47 @@ test('chunker emits separate chunks for nested sections', () => {
   assert.match(inner.text, /Inner content/);
   assert.match(sibling.text, /Sibling heading/);
   assert.match(sibling.text, /Sibling content/);
+});
+
+test('chunker falls back to the heading id when a section has no id', () => {
+  const page = {
+    source_path: 'index.html',
+    canonical_url: 'https://w3c.github.io/string-meta/',
+    language: 'en',
+    status: 'published',
+    translation_state: 'current',
+    title: 'Strings on the Web',
+    html: '<section><h2 id="introduction">Introduction</h2><p>Strings carry metadata.</p></section>'
+  };
+
+  const chunks = chunkHtmlPage(page);
+  assert.equal(chunks.length, 1);
+  assert.equal(chunks[0].section_id, 'introduction');
+  assert.equal(chunks[0].section_url, 'https://w3c.github.io/string-meta/#introduction');
+});
+
+test('chunker cites the nearest anchored ancestor for unanchored nested sections', () => {
+  const page = {
+    source_path: 'index.html',
+    canonical_url: 'https://w3c.github.io/string-meta/',
+    language: 'en',
+    status: 'published',
+    translation_state: 'current',
+    title: 'Strings on the Web',
+    html: [
+      '<section id="approaches">',
+      '<h2>Approaches</h2>',
+      '<section><h3>How it works</h3><p>No heading id here either.</p></section>',
+      '</section>'
+    ].join('')
+  };
+
+  const chunks = chunkHtmlPage(page);
+  const howItWorks = chunks.find((chunk) => chunk.heading_path.includes('How it works'));
+
+  assert(howItWorks);
+  assert.equal(howItWorks.section_id, 'chunk-2');
+  assert.equal(howItWorks.section_url, 'https://w3c.github.io/string-meta/#approaches');
 });
 
 test('indexer builds documents and chunks with source metadata', async () => {
@@ -159,6 +201,67 @@ test('activity discovery indexes only the configured WG and IG folders', async (
   assert(index.documents.every((document) => document.source_id === 'i18n-activity'));
   assert(index.documents.every((document) => document.status === 'published'));
   assert(index.documents.every((document) => document.canonical_url.startsWith('https://w3c.github.io/i18n-activity/')));
+});
+
+test('discovery with contentFiles indexes only the listed pages', async () => {
+  const files = await discoverContentFiles(stringMetaRoot, {
+    contentFiles: ['index.html'],
+    requireMetadata: false
+  });
+
+  assert.deepEqual(files, ['index.html']);
+});
+
+test('discovery rejects a contentFiles entry that does not exist', async () => {
+  await assert.rejects(
+    discoverContentFiles(stringMetaRoot, { contentFiles: ['missing.html'], requireMetadata: false }),
+    /Content file not found/
+  );
+});
+
+test('discovery rejects contentFiles paths that escape the source root', async () => {
+  for (const file of ['../outside.html', '/etc/passwd']) {
+    await assert.rejects(
+      discoverContentFiles(stringMetaRoot, { contentFiles: [file], requireMetadata: false }),
+      /Invalid content file path/
+    );
+  }
+});
+
+test('indexer builds the string-meta page as a single-document source', async () => {
+  const index = await buildIndex({
+    sourceRoot: stringMetaRoot,
+    publicBaseUrl: 'https://w3c.github.io/string-meta',
+    sourceMode: 'local',
+    sourceRef: 'fixture',
+    sourceCommit: 'fixture-sha',
+    sourceId: 'string-meta',
+    contentFiles: ['index.html'],
+    requireMetadata: false,
+    defaultStatus: 'published',
+    write: false
+  });
+
+  assert.deepEqual(index.documents.map((document) => document.source_path), ['index.html']);
+  assert.equal(index.documents[0].title, 'Strings on the Web: Language and Direction Metadata');
+  assert.equal(index.documents[0].language, 'en');
+  assert.equal(index.documents[0].status, 'published');
+  assert.equal(index.documents[0].canonical_url, 'https://w3c.github.io/string-meta/');
+  assert.equal(index.documents[0].source_id, 'string-meta');
+
+  const introduction = index.chunks.find((chunk) => chunk.section_id === 'introduction');
+  assert(introduction, 'heading id should provide the section anchor when the section has no id');
+  assert.equal(introduction.section_url, 'https://w3c.github.io/string-meta/#introduction');
+
+  const abstract = index.chunks.find((chunk) => chunk.section_id === 'abstract');
+  assert(abstract, 'the ReSpec abstract lives outside sections and should still be indexed');
+  assert.equal(abstract.section_url, 'https://w3c.github.io/string-meta/#abstract');
+  assert.match(abstract.text, /best practices for identifying the language and direction/);
+
+  const recommendation = index.chunks.find((chunk) => chunk.section_id === 'bp_and-reco');
+  assert.equal(recommendation.section_url, 'https://w3c.github.io/string-meta/#bp_and-reco');
+  assert.equal(index.chunks.every((chunk) => chunk.source_id === 'string-meta'), true);
+  assert.equal(index.chunks.some((chunk) => chunk.source_path === 'new_recommendations.html'), false);
 });
 
 test('indexer builds per-source index with source_id on documents and chunks', async () => {

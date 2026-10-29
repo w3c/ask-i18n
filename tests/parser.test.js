@@ -21,6 +21,14 @@ test('canonical URLs remove language suffixes and preserve index directories', (
     canonicalUrlForSourcePath('articles/http-charset/index.en.html', 'https://www.w3.org/International', 'charset'),
     'https://www.w3.org/International/articles/http-charset/#charset'
   );
+  assert.equal(
+    canonicalUrlForSourcePath('index.html', 'https://w3c.github.io/string-meta', 'introduction'),
+    'https://w3c.github.io/string-meta/#introduction'
+  );
+  assert.equal(
+    canonicalUrlForSourcePath('index.en.html', 'https://w3c.github.io/bp-i18n-specdev', 'char-encoding'),
+    'https://w3c.github.io/bp-i18n-specdev/#char-encoding'
+  );
 });
 
 test('draft and review citations use the GitHub Pages source URL', () => {

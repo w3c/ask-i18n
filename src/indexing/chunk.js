@@ -15,6 +15,7 @@ export function chunkHtmlPage(page, options = {}) {
   return rawChunks
     .map((raw, index) => {
       const sectionId = raw.section_id || `chunk-${index + 1}`;
+      const citationAnchor = raw.citation_anchor || '';
       const text = raw.text;
       if (!text) return null;
 
@@ -25,7 +26,7 @@ export function chunkHtmlPage(page, options = {}) {
         source_path: page.source_path,
         canonical_url: page.canonical_url,
         section_id: sectionId,
-        section_url: withSectionId(documentUrl, sectionId),
+        section_url: withSectionId(documentUrl, citationAnchor),
         language: page.language,
         status: page.status,
         translation_state: page.translation_state,
@@ -42,66 +43,71 @@ export function chunkHtmlPage(page, options = {}) {
 }
 
 function extractSectionChunks(html) {
-  const chunks = [];
-  const openPattern = /<section\b([^>]*)>/gi;
-  const closePattern = /<\/section\s*>/gi;
-  let openMatch;
+  return [
+    ...extractAbstractChunk(html),
+    ...collectSections(html).map((section) => {
+      const text = htmlToCleanText(section.html);
+      if (!text) return null;
 
-  while ((openMatch = openPattern.exec(html))) {
-    const attrs = openMatch[1] || '';
-    const contentStart = openMatch.index + openMatch[0].length;
-    let depth = 1;
-    let searchFrom = contentStart;
-    let contentEnd = -1;
-
-    while (depth > 0) {
-      openPattern.lastIndex = searchFrom;
-      closePattern.lastIndex = searchFrom;
-      const nextOpen = openPattern.exec(html);
-      const nextClose = closePattern.exec(html);
-
-      if (!nextClose) {
-        contentEnd = html.length;
-        break;
-      }
-
-      if (nextOpen && nextOpen.index < nextClose.index) {
-        depth++;
-        searchFrom = nextOpen.index + nextOpen[0].length;
-      } else {
-        depth--;
-        if (depth === 0) {
-          contentEnd = nextClose.index;
-        } else {
-          searchFrom = nextClose.index + nextClose[0].length;
-        }
-      }
-    }
-
-    if (contentEnd === -1) continue;
-
-    const sectionHtml = html.slice(contentStart, contentEnd);
-    const sectionId = firstMatch(attrs, /\bid=["']?([^"'\s>]+)/i);
-    const heading = cleanText(firstMatch(sectionHtml, /<h[2-4]\b[^>]*>([\s\S]*?)<\/h[2-4]>/i));
-    const text = htmlToCleanText(sectionHtml);
-
-    if (text) {
-      chunks.push({
-        section_id: sectionId || '',
-        heading_path: heading ? [heading] : [],
+      return {
+        section_id: section.sectionId || '',
+        citation_anchor: section.citationAnchor,
+        heading_path: section.heading ? [section.heading] : [],
         text
-      });
-    }
+      };
+    }).filter(Boolean)
+  ];
+}
 
-    openPattern.lastIndex = contentStart;
+// ReSpec pages put their summary in <div id="abstract"> outside any <section>,
+// so section parsing alone would drop it from the index.
+function extractAbstractChunk(html) {
+  const match = html.match(/<div\b[^>]*\bid=["']abstract["'][^>]*>([\s\S]*?)<\/div>/i);
+  const text = match ? htmlToCleanText(match[1]) : '';
+  return text ? [{ section_id: 'abstract', citation_anchor: 'abstract', heading_path: [], text }] : [];
+}
+
+function collectSections(html) {
+  const sections = [];
+  const stack = [];
+  const sectionPattern = /<section\b([^>]*)>|<\/section\s*>/gi;
+  let match;
+
+  while ((match = sectionPattern.exec(html))) {
+    if (match[1] !== undefined) {
+      const section = {
+        attrs: match[1] || '',
+        contentStart: match.index + match[0].length,
+        contentEnd: html.length,
+        parent: stack.at(-1) || null
+      };
+      stack.push(section);
+      sections.push(section);
+    } else if (stack.length > 0) {
+      stack.pop().contentEnd = match.index;
+    }
   }
 
-  return chunks;
+  for (const section of sections) {
+    section.html = html.slice(section.contentStart, section.contentEnd);
+    const headingMatch = section.html.match(/<h[2-4]\b([^>]*)>([\s\S]*?)<\/h[2-4]>/i);
+    const headingAttrs = headingMatch ? headingMatch[1] : '';
+    section.heading = cleanText(headingMatch ? headingMatch[2] : '');
+    // ReSpec pages commonly leave <section> unanchored and put the id on the
+    // heading. Either anchor is a valid citation target in the rendered page.
+    section.sectionId = firstMatch(section.attrs, /\bid=["']?([^"'\s>]+)/i) ||
+      firstMatch(headingAttrs, /\bid=["']?([^"'\s>]+)/i);
+    // A nested section with no anchor of its own still lives under an
+    // anchored ancestor, so cite that ancestor rather than inventing a fragment.
+    section.citationAnchor = section.sectionId || (section.parent ? section.parent.citationAnchor : '');
+  }
+
+  return sections;
 }
 
 function fallbackChunks(html) {
   const text = htmlToCleanText(html);
-  return text ? [{ section_id: 'chunk-1', heading_path: [], text }] : [];
+  return text ? [{ section_id: 'chunk-1', citation_anchor: '', heading_path: [], text }] : [];
 }
 
 function removeNonContent(html) {

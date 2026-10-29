@@ -78,6 +78,7 @@ function parseSources(overrides, env) {
       publicBaseUrl: firstDefined(overrides.publicBaseUrl, env.PUBLIC_BASE_URL, 'https://www.w3.org/International'),
       githubPagesBaseUrl: firstDefined(overrides.githubPagesBaseUrl, deriveGithubPagesBaseUrl(repoUrl)),
       contentRoots: null,
+      contentFiles: null,
       requireMetadata,
       defaultStatus: overrides.defaultStatus || (requireMetadata ? '' : 'published'),
       statusOverride: overrides.statusOverride || ''
@@ -101,6 +102,7 @@ function normalizeSource(source, index) {
     contentRoots: Array.isArray(source.contentRoots || source.content_roots)
       ? (source.contentRoots || source.content_roots)
       : null,
+    contentFiles: normalizeContentFiles(source.contentFiles ?? source.content_files),
     requireMetadata,
     defaultStatus: source.defaultStatus || source.default_status || (requireMetadata ? '' : 'published'),
     statusOverride: source.statusOverride || source.status_override || ''
@@ -113,6 +115,14 @@ export function deriveGithubPagesBaseUrl(repoUrl = '') {
   const match = String(repoUrl).match(/github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?\/?$/i);
   if (!match) return '';
   return `https://${match[1].toLowerCase()}.github.io/${match[2]}`;
+}
+
+function normalizeContentFiles(value) {
+  if (!Array.isArray(value)) return null;
+  const files = value
+    .map((file) => String(file || '').trim())
+    .filter(Boolean);
+  return files.length > 0 ? files : null;
 }
 
 export function loadEnvFile(envFilePath = '.env') {

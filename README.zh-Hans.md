@@ -63,7 +63,7 @@ npm run start
 - `TRUSTED_PROXIES=`（默认为空；忽略转发的客户端IP头）
 - `BASE_PATH=`（默认为空；设为`/ask-i18n`之类的子路径即可把应用部署在站点根路径之下）
 
-`.env.example`中的`SOURCES`配置示例启用了`i18n-drafts`、`bp-i18n-specdev`和`i18n-activity`的多源索引。其中`i18n-activity`源仅限于`i18n-wg`和`i18n-ig`文件夹。
+`.env.example`中的`SOURCES`配置示例启用了`i18n-drafts`、`bp-i18n-specdev`、`i18n-activity`和`string-meta`的多源索引。其中`i18n-activity`源仅限于`i18n-wg`和`i18n-ig`文件夹。
 
 `SOURCES`会覆盖单源`SOURCE_*`设置。如果只想使用本地`i18n-drafts`检出，请先删除或注释掉`SOURCES`，再设置`SOURCE_MODE=local`和`SOURCE_REPO_PATH`。
 

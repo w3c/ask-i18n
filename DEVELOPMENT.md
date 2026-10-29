@@ -7,7 +7,7 @@ This file describes the current project architecture and development workflow. K
 Ask W3C i18n is a Node.js 24 ESM application with no framework and no build
 step. It has two main execution paths:
 
-- Indexing path: read one or more configured W3C source trees, parse content pages, create document and chunk records, and write `.data/index.json`. The example multi-source configuration includes `w3c/i18n-drafts`, `w3c/bp-i18n-specdev`, and the `i18n-wg`/`i18n-ig` folders from `w3c/i18n-activity`.
+- Indexing path: read one or more configured W3C source trees, parse content pages, create document and chunk records, and write `.data/index.json`. The example multi-source configuration includes `w3c/i18n-drafts`, `w3c/bp-i18n-specdev`, the `i18n-wg`/`i18n-ig` folders from `w3c/i18n-activity`, and the `index.html` page from `w3c/string-meta`.
 - Query path: serve a static browser UI, load the latest index into memory, retrieve relevant chunks, generate a cited answer, and log query metadata to `.data/query-log.jsonl`.
 
 Answers must be based only on indexed W3C Internationalization sources.
@@ -54,7 +54,7 @@ The browser receives the files in `public/` directly from the Node server.
 
 The indexer entry point is `runIndexer()` in `src/indexing/indexer.js`.
 
-Each entry in `SOURCES` can restrict discovery with `contentRoots`, relax the normal W3C `f`-metadata requirement with `requireMetadata: false`, and optionally force a source-wide status with `statusOverride`.
+Each entry in `SOURCES` can restrict discovery with `contentRoots`, name exact source-relative pages with `contentFiles` (which takes precedence over `contentRoots`), relax the normal W3C `f`-metadata requirement with `requireMetadata: false`, and optionally force a source-wide status with `statusOverride`.
 
 Default i18n-drafts discovery includes `nav`, which contains substantive guidance such as `nav/about.html`, as well as the article, question, and tutorial roots. The normal content and metadata checks still apply. With the default W3C public base URL, navigation citations use `/International/i18n-drafts/nav/`; custom public base URLs keep their configured layout.
 

@@ -140,6 +140,32 @@ test('getConfig parses SOURCES JSON array and normalizes source entries', async 
   });
 });
 
+test('getConfig normalizes a source content file list', async () => {
+  const sources = JSON.stringify([
+    {
+      id: 'string-meta',
+      repoUrl: 'https://github.com/w3c/string-meta.git',
+      publicBaseUrl: 'https://w3c.github.io/string-meta',
+      content_files: ['index.html'],
+      require_metadata: false
+    },
+    {
+      id: 'i18n-drafts',
+      repoUrl: 'https://github.com/w3c/i18n-drafts.git',
+      publicBaseUrl: 'https://www.w3.org/International'
+    }
+  ]);
+  const envFilePath = await writeTempEnv(`SOURCES=${sources}`);
+
+  await withCleanEnv(async () => {
+    const config = getConfig({ envFilePath });
+
+    assert.deepEqual(config.sources[0].contentFiles, ['index.html']);
+    assert.equal(config.sources[0].requireMetadata, false);
+    assert.equal(config.sources[1].contentFiles, null);
+  });
+});
+
 test('getConfig lets a source override its GitHub Pages base URL', async () => {
   const sources = JSON.stringify([
     {
@@ -173,6 +199,24 @@ test('example configuration indexes the i18n activity group pages', async () => 
     assert.equal(activitySource.requireMetadata, false);
     assert.equal(activitySource.defaultStatus, 'published');
     assert.equal(activitySource.statusOverride, 'published');
+  });
+});
+
+test('example configuration indexes the string-meta page', async () => {
+  const envFilePath = new URL('../.env.example', import.meta.url).pathname;
+
+  await withCleanEnv(async () => {
+    const config = getConfig({ envFilePath });
+    const stringMetaSource = config.sources.find((source) => source.id === 'string-meta');
+
+    assert(stringMetaSource);
+    assert.equal(stringMetaSource.repoUrl, 'https://github.com/w3c/string-meta.git');
+    assert.equal(stringMetaSource.ref, 'gh-pages');
+    assert.equal(stringMetaSource.publicBaseUrl, 'https://w3c.github.io/string-meta');
+    assert.deepEqual(stringMetaSource.contentFiles, ['index.html']);
+    assert.equal(stringMetaSource.contentRoots, null);
+    assert.equal(stringMetaSource.requireMetadata, false);
+    assert.equal(stringMetaSource.defaultStatus, 'published');
   });
 });
 

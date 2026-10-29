@@ -64,7 +64,7 @@ Important defaults:
 - `TRUSTED_PROXIES=` (empty by default; forwarded client IP headers are ignored)
 - `BASE_PATH=` (empty by default; set a subpath such as `/ask-i18n` to serve the app below the site root)
 
-The example `SOURCES` configuration enables multi-source indexing for `i18n-drafts`, `bp-i18n-specdev`, and `i18n-activity`. The `i18n-activity` source is limited to the `i18n-wg` and `i18n-ig` folders.
+The example `SOURCES` configuration enables multi-source indexing for `i18n-drafts`, `bp-i18n-specdev`, `i18n-activity`, and `string-meta`. The `i18n-activity` source is limited to the `i18n-wg` and `i18n-ig` folders.
 
 `SOURCES` overrides the single-source `SOURCE_*` settings. To use only a local `i18n-drafts` checkout, remove or comment out `SOURCES` before setting `SOURCE_MODE=local` and `SOURCE_REPO_PATH`.
 
